@@ -86,10 +86,11 @@ const Investments = () => {
                       </div>
                     </div>
                     <InvestmentAnimation
-                      amount={currentEarnings}
+                      amount={investment.amount}
                       dailyRoi={investment.plan.daily_roi}
                       startDate={investment.created_at}
                       isActive={true}
+                      cycleDays={investment.cycle_days}
                     />
                   </div>
                 );

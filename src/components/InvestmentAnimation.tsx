@@ -6,36 +6,38 @@ interface InvestmentAnimationProps {
   dailyRoi: number;
   startDate: string;
   isActive?: boolean;
+  cycleDays: number;
 }
 
 const InvestmentAnimation = ({ 
   amount = 0, 
   dailyRoi = 0, 
   startDate = new Date().toISOString(), 
-  isActive = true 
+  isActive = true,
+  cycleDays = 90
 }: InvestmentAnimationProps) => {
-  const [currentAmount, setCurrentAmount] = useState(amount);
+  const [currentEarnings, setCurrentEarnings] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     if (!isActive || !amount || !dailyRoi) return;
 
-    // Calculer le montant actuel basé sur le temps écoulé
+    // Calculer les gains actuels basés sur le temps écoulé
     const start = new Date(startDate).getTime();
     const now = new Date().getTime();
     const daysElapsed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
     const dailyReturn = amount * (dailyRoi / 100);
     
-    // Mettre à jour le montant toutes les secondes
+    // Mettre à jour les gains toutes les secondes
     const interval = setInterval(() => {
       const currentTime = new Date().getTime();
       const secondsInDay = (currentTime - start) % (1000 * 60 * 60 * 24) / 1000;
       const todayReturn = (dailyReturn * secondsInDay) / (24 * 60 * 60);
-      const newAmount = amount + (dailyReturn * daysElapsed) + todayReturn;
-      setCurrentAmount(Math.max(0, newAmount));
+      const totalEarnings = (dailyReturn * daysElapsed) + todayReturn;
+      setCurrentEarnings(Math.max(0, totalEarnings));
 
-      // Calculer le temps restant jusqu'à la fin des 3 mois
-      const endDate = new Date(start + (90 * 24 * 60 * 60 * 1000));
+      // Calculer le temps restant jusqu'à la fin du cycle
+      const endDate = new Date(start + (cycleDays * 24 * 60 * 60 * 1000));
       const timeRemaining = endDate.getTime() - currentTime;
       
       if (timeRemaining <= 0) {
@@ -51,13 +53,7 @@ const InvestmentAnimation = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [amount, dailyRoi, startDate, isActive]);
-
-  // Calculer les projections
-  const dailyReturn = amount * (dailyRoi / 100);
-  const weeklyReturn = dailyReturn * 7;
-  const monthlyReturn = dailyReturn * 30;
-  const totalReturn = dailyReturn * 90;
+  }, [amount, dailyRoi, startDate, isActive, cycleDays]);
 
   const formatAmount = (value: number) => {
     return Math.max(0, value).toLocaleString('fr-FR');
@@ -65,7 +61,7 @@ const InvestmentAnimation = ({
 
   return (
     <div className="space-y-8">
-      {/* Animation de l'arbre d'investissement */}
+      {/* Animation de l'arbre d'investissement avec gains */}
       <div className="relative h-48 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative w-32 h-32">
@@ -102,49 +98,16 @@ const InvestmentAnimation = ({
           </div>
         </div>
 
-        {/* Overlay avec les informations */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col justify-end p-4">
-          <div className="text-2xl font-bold text-white mb-1">
-            {formatAmount(currentAmount)} FCFA
-          </div>
-          <div className="text-sm text-white/90">
-            +{formatAmount(dailyReturn)} FCFA / jour
-          </div>
-          {isActive && timeLeft && (
-            <div className="mt-2">
-              <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-medium">
-                {timeLeft}
-              </span>
+        {/* Overlay avec les gains et le compte à rebours */}
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center">
+          <div className="text-center text-white">
+            <div className="text-2xl font-bold mb-2">
+              +{formatAmount(currentEarnings)} FCFA
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Projections */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-gray-600">Rendement Quotidien</h3>
-          <p className="text-2xl font-bold text-blue-600">
-            +{formatAmount(dailyReturn)} FCFA
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-gray-600">Rendement Hebdomadaire</h3>
-          <p className="text-2xl font-bold text-green-600">
-            +{formatAmount(weeklyReturn)} FCFA
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-gray-600">Rendement Mensuel</h3>
-          <p className="text-2xl font-bold text-purple-600">
-            +{formatAmount(monthlyReturn)} FCFA
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-gray-600">Rendement Total (3 mois)</h3>
-          <p className="text-2xl font-bold text-indigo-600">
-            +{formatAmount(totalReturn)} FCFA
-          </p>
+            <div className="text-sm font-medium px-3 py-1 bg-blue-600 rounded-full">
+              {timeLeft}
+            </div>
+          </div>
         </div>
       </div>
     </div>

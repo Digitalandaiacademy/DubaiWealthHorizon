@@ -18,6 +18,7 @@ interface UserInvestment {
   status: string;
   created_at: string;
   plan: InvestmentPlan;
+  cycle_days: number;
 }
 
 interface InvestmentState {
@@ -53,6 +54,18 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
   loadUserInvestments: async () => {
     try {
       set({ loading: true });
+
+      // Charger la durée du cycle depuis les paramètres système
+      const { data: cycleData, error: cycleError } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'investment_cycle_days')
+        .single();
+
+      if (cycleError) throw cycleError;
+      const cycleDays = parseInt(cycleData?.value || '90');
+
+      // Charger les investissements
       const { data, error } = await supabase
         .from('user_investments')
         .select(`
@@ -62,7 +75,16 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      set({ userInvestments: data || [] });
+
+      // Ajouter la durée du cycle à chaque investissement
+      const investmentsWithCycle = (data || []).map(inv => ({
+        ...inv,
+        cycle_days: cycleDays
+      }));
+
+      set({ userInvestments: investmentsWithCycle });
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des investissements:', error);
     } finally {
       set({ loading: false });
     }
@@ -135,7 +157,7 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
         const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
         // Si l'investissement a plus de 90 jours, le marquer comme terminé
-        if (daysDiff >= 90) {
+        if (daysDiff >= investment.cycle_days) {
           const { error } = await supabase
             .from('user_investments')
             .update({ status: 'completed' })
@@ -147,7 +169,7 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
           await supabase
             .from('notifications')
             .insert({
-              user_id: investment.user_id,
+              user_id: investment.plan_id,
               title: 'Investissement terminé',
               message: `Votre investissement de ${investment.amount.toLocaleString('fr-FR')} FCFA est arrivé à terme.`,
               type: 'info'
