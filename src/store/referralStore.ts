@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../utils/supabaseClient';
 import { useAuthStore } from './authStore';
 
 interface Referral {

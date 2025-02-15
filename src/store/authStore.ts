@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../utils/supabaseClient';
 
 interface Profile {
   id: string;
@@ -22,6 +22,16 @@ interface AuthState {
   updateProfile: (data: Partial<Profile>) => Promise<void>;
 }
 
+const getReferrerId = async (referralCode: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('referral_code', referralCode)
+    .single();
+  
+  return data?.id || null;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
@@ -43,6 +53,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         set({ user: session.user, profile });
       }
+    } catch (error) {
+      console.error('Error initializing auth:', error);
     } finally {
       set({ loading: false });
     }
@@ -81,7 +93,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         full_name: fullName,
         phone_number: phoneNumber,
         referral_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        referred_by: referralCode ? await getReferrerId(referralCode) : null
+        referred_by: referralCode ? await getReferrerId(referralCode) : null,
+        is_admin: false // Par défaut, les nouveaux utilisateurs ne sont pas admin
       });
 
     if (profileError) throw profileError;
@@ -114,22 +127,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) throw error;
 
     // Refresh profile
-    const { data: profile } = await supabase
+    const { data: newProfile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    set({ profile });
+    set({ profile: newProfile });
   }
 }));
-
-async function getReferrerId(referralCode: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('referral_code', referralCode)
-    .single();
-
-  return data?.id || null;
-}

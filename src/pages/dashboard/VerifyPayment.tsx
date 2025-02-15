@@ -19,6 +19,18 @@ const VerifyPayment = () => {
     try {
       setVerifying(true);
 
+      // Vérifier si l'investissement existe déjà
+      const { data: existingInvestment, error: existingError } = await supabase
+        .from('user_investments')
+        .select('*')
+        .eq('transaction_id', transactionId)
+        .single();
+
+      if (existingInvestment) {
+        toast.error('Cet ID de transaction a déjà été utilisé');
+        return;
+      }
+
       // Vérifier si l'ID de transaction correspond à celui enregistré par l'admin
       const { data: verifications, error: verificationError } = await supabase
         .from('payment_verifications')
@@ -43,7 +55,9 @@ const VerifyPayment = () => {
           plan_id: verifications.investment_plan,
           amount: verifications.amount,
           status: 'active',
-          transaction_id: transactionId
+          transaction_id: transactionId,
+          created_at: new Date().toISOString(),
+          last_roi_date: new Date().toISOString()  // Pour le calcul du ROI
         });
 
       if (investmentError) throw investmentError;
@@ -53,7 +67,8 @@ const VerifyPayment = () => {
         .from('payment_verifications')
         .update({
           status: 'completed',
-          transaction_id: transactionId
+          transaction_id: transactionId,
+          completed_at: new Date().toISOString()
         })
         .eq('id', verifications.id);
 
