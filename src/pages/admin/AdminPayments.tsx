@@ -91,23 +91,10 @@ const AdminPayments = () => {
         return;
       }
 
-      // Vérifier si l'ID de transaction existe déjà
-      const { data: existingPayment, error: existingError } = await supabase
-        .from('payment_verifications')
-        .select('id')
-        .eq('verified_transaction_id', transactionId)
-        .single();
-
-      if (existingPayment) {
-        toast.error('Cet ID de transaction a déjà été utilisé');
-        return;
-      }
-
-      // Mise à jour du statut de paiement
+      // Mise à jour du paiement avec l'ID de transaction vérifié
       const { error: paymentError } = await supabase
         .from('payment_verifications')
         .update({
-          status: 'verified',
           verified_transaction_id: transactionId,
           verified_at: new Date().toISOString()
         })
@@ -115,36 +102,13 @@ const AdminPayments = () => {
 
       if (paymentError) throw paymentError;
 
-      // Mise à jour du statut de l'investissement associé
-      const { error: investmentError } = await supabase
-        .from('user_investments')
-        .update({
-          status: 'active',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', payment.investment_id);
-
-      if (investmentError) throw investmentError;
-
-      // Créer une notification pour l'utilisateur
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: payment.user_id,
-          title: 'Paiement Vérifié',
-          message: `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été vérifié. Veuillez entrer l'ID de transaction ${transactionId} pour activer votre investissement.`,
-          type: 'success'
-        });
-
-      if (notificationError) throw notificationError;
-
-      toast.success('Paiement vérifié avec succès');
+      toast.success("ID de transaction enregistré. En attente de la confirmation de l'utilisateur.");
       setSelectedPayment(null);
       setTransactionId('');
       loadPayments();
     } catch (error: any) {
       console.error('Erreur lors de la vérification:', error);
-      toast.error(error.message);
+      toast.error(`Erreur lors de la vérification: ${error.message}`);
     }
   };
 

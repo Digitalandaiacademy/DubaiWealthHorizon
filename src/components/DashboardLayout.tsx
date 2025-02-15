@@ -12,7 +12,8 @@ import {
   X,
   UserCircle,
   ArrowDownCircle,
-  Shield
+  Shield,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import NotificationDropdown from './NotificationDropdown';
@@ -26,6 +27,7 @@ const DashboardLayout = () => {
   const navigation = [
     { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Mes investissements', href: '/dashboard/investments', icon: Wallet },
+    { name: 'Vérification des Paiements', href: '/dashboard/payment-verification', icon: CheckCircle2 },
     { name: 'Transactions', href: '/dashboard/transactions', icon: History },
     { name: 'Retraits', href: '/dashboard/withdrawals', icon: ArrowDownCircle },
     { name: 'Parrainage', href: '/dashboard/referral', icon: Users },

@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import PublicLayout from './components/PublicLayout';
 import Home from './pages/Home';
 import About from './pages/About';
 import Privacy from './pages/Privacy';
@@ -20,8 +19,10 @@ import NewInvestment from './pages/dashboard/NewInvestment';
 import Transactions from './pages/dashboard/Transactions';
 import Profile from './pages/dashboard/Profile';
 import Withdrawals from './pages/dashboard/Withdrawals';
-import Referral from './pages/dashboard/Referral';
+import Referral from './pages/Referral';
+import ReferralDashboard from './pages/dashboard/ReferralDashboard';
 import VerifyPayment from './pages/dashboard/VerifyPayment';
+import PaymentVerification from './pages/dashboard/PaymentVerification';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
 import AdminLayout from './components/AdminLayout';
@@ -43,16 +44,17 @@ function App() {
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
         <Routes>
           {/* Routes publiques avec Navbar et Footer */}
-          <Route path="/" element={<><Navbar /><main className="flex-grow"><Home /></main><Footer /></>} />
-          <Route path="/about" element={<><Navbar /><main className="flex-grow"><About /></main><Footer /></>} />
-          <Route path="/privacy" element={<><Navbar /><main className="flex-grow"><Privacy /></main><Footer /></>} />
-          <Route path="/faq" element={<><Navbar /><main className="flex-grow"><FAQ /></main><Footer /></>} />
-          <Route path="/login" element={<><Navbar /><main className="flex-grow"><Login /></main><Footer /></>} />
-          <Route path="/register" element={<><Navbar /><main className="flex-grow"><Register /></main><Footer /></>} />
-          <Route path="/investment" element={<><Navbar /><main className="flex-grow"><Investment /></main><Footer /></>} />
-          <Route path="/testimonials" element={<><Navbar /><main className="flex-grow"><Testimonials /></main><Footer /></>} />
-          <Route path="/community" element={<><Navbar /><main className="flex-grow"><Community /></main><Footer /></>} />
-          <Route path="/simulator" element={<><Navbar /><main className="flex-grow"><Simulator /></main><Footer /></>} />
+          <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
+          <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+          <Route path="/login" element={<PublicLayout showTelegram={false}><Login /></PublicLayout>} />
+          <Route path="/register" element={<PublicLayout showTelegram={false}><Register /></PublicLayout>} />
+          <Route path="/investment" element={<PublicLayout><Investment /></PublicLayout>} />
+          <Route path="/testimonials" element={<PublicLayout><Testimonials /></PublicLayout>} />
+          <Route path="/community" element={<PublicLayout><Community /></PublicLayout>} />
+          <Route path="/simulator" element={<PublicLayout><Simulator /></PublicLayout>} />
+          <Route path="/referral" element={<PublicLayout><Referral /></PublicLayout>} />
 
           {/* Routes du tableau de bord utilisateur */}
           <Route path="/dashboard" element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
@@ -62,8 +64,9 @@ function App() {
             <Route path="transactions" element={<Transactions />} />
             <Route path="profile" element={<Profile />} />
             <Route path="withdrawals" element={<Withdrawals />} />
-            <Route path="referral" element={<Referral />} />
+            <Route path="referral" element={<ReferralDashboard />} />
             <Route path="verify-payment/:id" element={<VerifyPayment />} />
+            <Route path="payment-verification" element={<PaymentVerification />} />
           </Route>
 
           {/* Routes du tableau de bord administrateur */}
