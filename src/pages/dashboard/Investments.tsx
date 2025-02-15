@@ -19,7 +19,7 @@ const Investments = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Mes Investissements</h1>
         <Link
-          to="/dashboard/investments/new"
+          to="/dashboard/invest"
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Nouvel Investissement
@@ -48,7 +48,7 @@ const Investments = () => {
               </p>
               <div className="mt-6">
                 <Link
-                  to="/dashboard/investments/new"
+                  to={`/dashboard/invest?plan=${plans[0].id}`}
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <TrendingUp className="-ml-1 mr-2 h-5 w-5" />
@@ -107,7 +107,7 @@ const Investments = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((plan) => (
-            <div key={plan.id} className="border rounded-lg p-6">
+            <div key={plan.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
               <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
               <div className="text-2xl font-bold text-blue-600 mb-4">
                 {plan.price.toLocaleString('fr-FR')} FCFA
@@ -122,12 +122,14 @@ const Investments = () => {
                   </div>
                 ))}
               </div>
-              <Link
-                to={`/dashboard/investments/new?plan=${plan.id}`}
-                className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Choisir ce plan
-              </Link>
+              <div className="p-6">
+                <Link
+                  to={`/dashboard/invest?plan=${plan.id}`}
+                  className="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Choisir ce plan
+                </Link>
+              </div>
             </div>
           ))}
         </div>

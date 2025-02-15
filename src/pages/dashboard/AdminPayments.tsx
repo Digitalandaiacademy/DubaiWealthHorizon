@@ -13,10 +13,16 @@ interface PaymentVerification {
   status: string;
   created_at: string;
   verified_at: string | null;
+  verified_transaction_id: string | null;
   profiles: {
     full_name: string;
     email: string;
     phone_number: string;
+  };
+  investment_plans: {
+    name: string;
+    price: number;
+    daily_roi: number;
   };
 }
 
@@ -24,6 +30,8 @@ const AdminPayments = () => {
   const [payments, setPayments] = useState<PaymentVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [selectedPayment, setSelectedPayment] = useState<PaymentVerification | null>(null);
   const { profile } = useAuthStore();
 
   const loadPayments = async () => {
@@ -37,58 +45,50 @@ const AdminPayments = () => {
             full_name,
             email,
             phone_number
+          ),
+          investment_plans (
+            name,
+            price,
+            daily_roi
           )
         `)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPayments(data || []);
     } catch (error: any) {
+      console.error('Erreur lors du chargement des paiements:', error);
       toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const processPayment = async (payment: PaymentVerification, approved: boolean) => {
+  const handleVerifyPayment = async (payment: PaymentVerification) => {
     try {
-      const { error: verificationError } = await supabase
+      if (!transactionId) {
+        toast.error("Veuillez entrer l'ID de la transaction");
+        return;
+      }
+
+      // Mettre à jour la vérification de paiement avec l'ID de transaction
+      const { error: updateError } = await supabase
         .from('payment_verifications')
         .update({
-          status: approved ? 'verified' : 'rejected',
+          verified_transaction_id: transactionId,
           verified_at: new Date().toISOString()
         })
         .eq('id', payment.id);
 
-      if (verificationError) throw verificationError;
+      if (updateError) throw updateError;
 
-      // Update user's payment status
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          payment_status: approved ? 'verified' : 'rejected'
-        })
-        .eq('id', payment.user_id);
-
-      if (profileError) throw profileError;
-
-      // Create notification
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: payment.user_id,
-          title: approved ? 'Paiement approuvé' : 'Paiement rejeté',
-          message: approved 
-            ? `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été approuvé.`
-            : `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été rejeté.`,
-          type: approved ? 'success' : 'error'
-        });
-
-      if (notificationError) throw notificationError;
-
-      toast.success(approved ? 'Paiement approuvé' : 'Paiement rejeté');
+      toast.success('ID de transaction enregistré avec succès');
+      setTransactionId('');
+      setSelectedPayment(null);
       loadPayments();
     } catch (error: any) {
+      console.error('Erreur lors de la vérification:', error);
       toast.error(error.message);
     }
   };
@@ -99,42 +99,35 @@ const AdminPayments = () => {
     }
   }, [profile]);
 
-  const filteredPayments = payments.filter(p => 
-    p.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Vérification des Paiements</h1>
 
-  if (!profile?.is_admin) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="text-center">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900">Accès refusé</h3>
-          <p className="mt-1 text-gray-500">
-            Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+      {/* Barre de recherche */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Rechercher par nom, email ou numéro de téléphone..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
+        />
+        <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+        </div>
+      ) : payments.length === 0 ? (
+        <div className="text-center py-8">
+          <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun paiement en attente</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Tous les paiements ont été vérifiés.
           </p>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Vérification des Paiements</h1>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -143,13 +136,13 @@ const AdminPayments = () => {
                   Utilisateur
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Plan
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Montant
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Méthode
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
@@ -160,22 +153,16 @@ const AdminPayments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">
-                    <div className="flex justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600"></div>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    Aucun paiement en attente
-                  </td>
-                </tr>
-              ) : (
-                filteredPayments.map((payment) => (
+              {payments
+                .filter(payment => {
+                  const searchStr = searchTerm.toLowerCase();
+                  return (
+                    payment.profiles.full_name.toLowerCase().includes(searchStr) ||
+                    payment.profiles.email.toLowerCase().includes(searchStr) ||
+                    payment.profiles.phone_number.toLowerCase().includes(searchStr)
+                  );
+                })
+                .map((payment) => (
                   <tr key={payment.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -189,59 +176,84 @@ const AdminPayments = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm text-gray-900">
+                        {payment.investment_plans.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        ROI: {payment.investment_plans.daily_roi}%
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
                         {payment.amount.toLocaleString('fr-FR')} FCFA
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {payment.payment_method === 'orange' ? 'Orange Money' : 'MTN Mobile Money'}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        ${payment.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : payment.status === 'verified'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}>
-                        {payment.status === 'pending'
-                          ? 'En attente'
-                          : payment.status === 'verified'
-                          ? 'Vérifié'
-                          : 'Rejeté'
-                        }
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {payment.payment_method === 'orange' ? 'Orange Money' : 'MTN Mobile Money'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(payment.created_at).toLocaleDateString('fr-FR')}
+                      {new Date(payment.created_at).toLocaleString('fr-FR')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {payment.status === 'pending' && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => processPayment(payment, true)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Approuver"
-                          >
-                            <Check className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => processPayment(payment, false)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Rejeter"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedPayment(payment)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        Vérifier
+                      </button>
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
+
+      {/* Modal de vérification */}
+      {selectedPayment && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Vérification du paiement
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Utilisateur: {selectedPayment.profiles.full_name}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Montant: {selectedPayment.amount.toLocaleString('fr-FR')} FCFA
+                </p>
+                <div className="mt-4">
+                  <input
+                    type="text"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="ID de la transaction"
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  onClick={() => handleVerifyPayment(selectedPayment)}
+                  className="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  Enregistrer l'ID
+                </button>
+                <button
+                  onClick={() => setSelectedPayment(null)}
+                  className="mt-3 px-4 py-2 bg-gray-100 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

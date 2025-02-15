@@ -189,8 +189,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </div>
 
         {/* Page Content */}
-        <main className="p-4">
-          {children}
+        <main className="flex-1 p-4">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

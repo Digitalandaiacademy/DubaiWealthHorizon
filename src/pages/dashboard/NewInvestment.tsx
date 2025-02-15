@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Phone, AlertCircle, Check, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 const NewInvestment = () => {
   const navigate = useNavigate();
@@ -23,17 +24,28 @@ const NewInvestment = () => {
 
   useEffect(() => {
     loadPlans();
-  }, []);
+  }, [loadPlans]);
 
   useEffect(() => {
-    if (plans.length > 0 && selectedPlanId) {
+    if (!plans.length) {
+      return;
+    }
+
+    if (selectedPlanId) {
       const plan = plans.find(p => p.id === selectedPlanId);
       if (plan) {
         setSelectedPlan(plan);
         setAmount(plan.price);
+      } else {
+        toast.error('Plan d\'investissement non trouvé');
+        navigate('/dashboard/investments');
       }
+    } else {
+      // Si aucun plan n'est sélectionné, utiliser le premier plan par défaut
+      setSelectedPlan(plans[0]);
+      setAmount(plans[0].price);
     }
-  }, [plans, selectedPlanId]);
+  }, [plans, selectedPlanId, navigate]);
 
   const getPaymentCode = () => {
     if (paymentMethod === 'orange') {
@@ -67,11 +79,32 @@ const NewInvestment = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedPlan) {
+      toast.error('Veuillez sélectionner un plan d\'investissement');
+      return;
+    }
+
     setShowVerification(true);
 
-    // Mettre à jour le statut de paiement de l'utilisateur
     try {
-      const { error } = await supabase
+      // Créer une vérification de paiement
+      const { error: verificationError } = await supabase
+        .from('payment_verifications')
+        .insert({
+          user_id: user?.id,
+          amount: amount,
+          payment_method: paymentMethod,
+          status: 'pending',
+          investment_plan: selectedPlan.id,
+          transaction_id: null,  
+          created_at: new Date().toISOString()
+        });
+
+      if (verificationError) throw verificationError;
+
+      // Mettre à jour le statut de paiement de l'utilisateur
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           payment_status: 'pending',
@@ -81,9 +114,13 @@ const NewInvestment = () => {
         })
         .eq('id', user?.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      toast.success('Demande de paiement envoyée avec succès');
     } catch (error: any) {
-      toast.error('Erreur lors de la mise à jour du statut');
+      console.error('Erreur lors de la création de la vérification:', error);
+      toast.error(error.message || 'Erreur lors de la mise à jour du statut');
+      setShowVerification(false);
     }
   };
 
@@ -93,23 +130,23 @@ const NewInvestment = () => {
       return;
     }
 
+    if (!selectedPlan) {
+      toast.error('Plan d\'investissement non trouvé');
+      return;
+    }
+
     try {
       setVerifying(true);
       
-      const { data: verification, error: verificationError } = await supabase
-        .from('payment_verifications')
-        .select('status')
-        .eq('transaction_id', transactionId)
-        .maybeSingle();
-
-      if (verificationError) throw verificationError;
-
-      if (verification?.status === 'verified') {
-        toast.success('Paiement vérifié avec succès');
-        navigate('/dashboard/investments');
-      } else {
-        toast.error('Paiement non vérifié. Veuillez patienter ou contacter le support.');
-      }
+      await createInvestment(
+        selectedPlan.id,
+        amount,
+        transactionId,
+        paymentMethod
+      );
+      
+      toast.success('Paiement vérifié avec succès');
+      navigate('/dashboard/investments');
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la vérification');
     } finally {
@@ -118,214 +155,238 @@ const NewInvestment = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Bouton de retour */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 hover:text-gray-900 transition-colors mb-4"
-      >
-        <ArrowLeft className="h-5 w-5 mr-2" />
-        Retour
-      </button>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Nouvel Investissement</h1>
+        <button
+          onClick={() => navigate('/dashboard/investments')}
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Retour
+        </button>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Nouvel Investissement</h1>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Sélection du plan */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Plan d&apos;investissement
-            </label>
-            <select
-              value={selectedPlan?.id || ''}
-              onChange={(e) => {
-                const plan = plans.find(p => p.id === e.target.value);
-                setSelectedPlan(plan);
-                setAmount(plan?.price || 0);
-              }}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              required
+      ) : !selectedPlan ? (
+        <div className="text-center py-8">
+          <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun plan sélectionné</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Veuillez sélectionner un plan d'investissement.
+          </p>
+          <div className="mt-6">
+            <Link
+              to="/dashboard/investments"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
-              <option value="">Sélectionnez un plan</option>
-              {plans.map((plan) => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.name} - {plan.price.toLocaleString('fr-FR')} FCFA
-                </option>
-              ))}
-            </select>
+              Voir les plans
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between p-6">
+            <h1 className="text-2xl font-bold text-gray-900">Nouvel Investissement</h1>
           </div>
 
-          {/* Montant */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Montant (FCFA)
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              min={selectedPlan?.price || 0}
-              step="1000"
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-              required
-            />
-            {selectedPlan && (
-              <p className="mt-2 text-sm text-gray-500">
-                Montant minimum : {selectedPlan.price.toLocaleString('fr-FR')} FCFA
-              </p>
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Sélection du plan */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Plan d&apos;investissement
+              </label>
+              <select
+                value={selectedPlan?.id || ''}
+                onChange={(e) => {
+                  const plan = plans.find(p => p.id === e.target.value);
+                  setSelectedPlan(plan);
+                  setAmount(plan?.price || 0);
+                }}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                required
+              >
+                <option value="">Sélectionnez un plan</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} - {plan.price.toLocaleString('fr-FR')} FCFA
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Montant */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Montant (FCFA)
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                min={selectedPlan?.price || 0}
+                step="1000"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                required
+              />
+              {selectedPlan && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Montant minimum : {selectedPlan.price.toLocaleString('fr-FR')} FCFA
+                </p>
+              )}
+            </div>
+
+            {/* Méthode de paiement */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Méthode de paiement
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { id: 'orange', name: 'Orange Money', icon: '🔸', number: '695265626' },
+                  { id: 'mtn', name: 'MTN Mobile Money', icon: '💛', number: '651245847' }
+                ].map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => handlePaymentMethodSelect(method.id)}
+                    className={`
+                      flex items-center p-4 border rounded-lg
+                      ${paymentMethod === method.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-200'
+                      }
+                    `}
+                  >
+                    <span className="text-xl mr-2">{method.icon}</span>
+                    <div className="text-left">
+                      <span className="text-sm font-medium text-gray-900 block">{method.name}</span>
+                      <span className="text-sm text-gray-500">{method.number}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Code de paiement */}
+            {showPaymentCode && !showVerification && (
+              <div className="bg-blue-50 p-6 rounded-lg">
+                <div className="flex items-start space-x-4">
+                  <Phone className="h-6 w-6 text-blue-600 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Instructions de paiement {paymentMethod === 'orange' ? 'Orange Money' : 'MTN Mobile Money'}
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      1. Composez le code suivant sur votre téléphone :<br />
+                      <code className="bg-white px-3 py-1 rounded-md text-blue-600 font-mono mt-2 block">
+                        {getPaymentCode()}
+                      </code>
+                    </p>
+                    <div className="flex space-x-4">
+                      <button
+                        type="button"
+                        onClick={copyPaymentCode}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                      >
+                        Copier le code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openWhatsApp}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                      >
+                        Contacter sur WhatsApp
+                      </button>
+                    </div>
+                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <AlertCircle className="inline-block h-4 w-4 mr-2" />
+                        Important : Après avoir effectué le paiement, envoyez une capture d'écran 
+                        de la confirmation de paiement via WhatsApp au +237 695 265 626
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* Méthode de paiement */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Méthode de paiement
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { id: 'orange', name: 'Orange Money', icon: '🔸', number: '695265626' },
-                { id: 'mtn', name: 'MTN Mobile Money', icon: '💛', number: '651245847' }
-              ].map((method) => (
+            {/* Vérification du paiement */}
+            {showVerification && (
+              <div className="bg-blue-50 p-6 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Vérification du paiement
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ID de la transaction
+                    </label>
+                    <input
+                      type="text"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      placeholder="Entrez l'ID de la transaction"
+                      className="w-full p-2 border rounded-md"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={verifyPayment}
+                    disabled={verifying}
+                    className={`
+                      w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md
+                      ${verifying ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}
+                      text-white font-medium focus:outline-none
+                    `}
+                  >
+                    {verifying ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
+                        Vérification en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Vérifier le paiement
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Bouton de soumission */}
+            {!showVerification && (
+              <div className="flex justify-end">
                 <button
-                  key={method.id}
-                  type="button"
-                  onClick={() => handlePaymentMethodSelect(method.id)}
+                  type="submit"
+                  disabled={loading || !paymentMethod}
                   className={`
-                    flex items-center p-4 border rounded-lg
-                    ${paymentMethod === method.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-200'
+                    inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white
+                    ${loading || !paymentMethod
+                      ? 'bg-blue-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
                     }
                   `}
                 >
-                  <span className="text-xl mr-2">{method.icon}</span>
-                  <div className="text-left">
-                    <span className="text-sm font-medium text-gray-900 block">{method.name}</span>
-                    <span className="text-sm text-gray-500">{method.number}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Code de paiement */}
-          {showPaymentCode && !showVerification && (
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <div className="flex items-start space-x-4">
-                <Phone className="h-6 w-6 text-blue-600 mt-1" />
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Instructions de paiement {paymentMethod === 'orange' ? 'Orange Money' : 'MTN Mobile Money'}
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    1. Composez le code suivant sur votre téléphone :<br />
-                    <code className="bg-white px-3 py-1 rounded-md text-blue-600 font-mono mt-2 block">
-                      {getPaymentCode()}
-                    </code>
-                  </p>
-                  <div className="flex space-x-4">
-                    <button
-                      type="button"
-                      onClick={copyPaymentCode}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                    >
-                      Copier le code
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openWhatsApp}
-                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-                    >
-                      Contacter sur WhatsApp
-                    </button>
-                  </div>
-                  <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      <AlertCircle className="inline-block h-4 w-4 mr-2" />
-                      Important : Après avoir effectué le paiement, envoyez une capture d'écran 
-                      de la confirmation de paiement via WhatsApp au +237 695 265 626
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Vérification du paiement */}
-          {showVerification && (
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Vérification du paiement
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID de la transaction
-                  </label>
-                  <input
-                    type="text"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    placeholder="Entrez l'ID de la transaction"
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={verifyPayment}
-                  disabled={verifying}
-                  className={`
-                    w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md
-                    ${verifying ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}
-                    text-white font-medium focus:outline-none
-                  `}
-                >
-                  {verifying ? (
+                  {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
-                      Vérification en cours...
+                      Traitement en cours...
                     </>
                   ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Vérifier le paiement
-                    </>
+                    "Confirmer l'investissement"
                   )}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* Bouton de soumission */}
-          {!showVerification && (
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={loading || !paymentMethod}
-                className={`
-                  inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white
-                  ${loading || !paymentMethod
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                  }
-                `}
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
-                    Traitement en cours...
-                  </>
-                ) : (
-                  "Confirmer l'investissement"
-                )}
-              </button>
-            </div>
-          )}
-        </form>
-      </div>
+            )}
+          </form>
+        </div>
+      )}
     </div>
   );
 };

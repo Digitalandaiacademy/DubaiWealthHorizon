@@ -135,9 +135,10 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Investissements Actifs</h2>
             <Link
-              to="/dashboard/new-investment"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              to="/dashboard/invest"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
+              <TrendingUp className="-ml-1 mr-2 h-5 w-5" />
               Nouvel Investissement
             </Link>
           </div>
@@ -198,7 +199,7 @@ const Dashboard = () => {
             <div className="text-center py-8">
               <p className="text-gray-500">Aucun investissement actif pour le moment.</p>
               <Link
-                to="/dashboard/new-investment"
+                to="/dashboard/invest"
                 className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
                 Commencer à investir

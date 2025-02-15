@@ -70,33 +70,54 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
 
   createInvestment: async (planId: string, amount: number, transactionId: string, paymentMethod: string) => {
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) {
+        throw new Error('Utilisateur non connecté');
+      }
+
       // Créer l'investissement
       const { error: investmentError } = await supabase
         .from('user_investments')
         .insert({
+          user_id: user.id,
           plan_id: planId,
           amount: amount,
-          status: 'pending'
+          status: 'active',
+          transaction_id: transactionId
         });
 
       if (investmentError) throw investmentError;
 
-      // Créer la vérification de paiement
-      const { error: paymentError } = await supabase
+      // Mettre à jour la vérification de paiement
+      const { error: verificationError } = await supabase
         .from('payment_verifications')
-        .insert({
-          transaction_id: transactionId,
-          amount: amount,
-          payment_method: paymentMethod,
-          status: 'pending'
-        });
+        .update({
+          status: 'verified',
+          verified_at: new Date().toISOString(),
+          verified_transaction_id: transactionId
+        })
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .eq('investment_plan', planId);
 
-      if (paymentError) throw paymentError;
+      if (verificationError) throw verificationError;
+
+      // Mettre à jour le statut de l'utilisateur
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          payment_status: 'verified',
+          last_payment_verified_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
 
       toast.success('Investissement créé avec succès');
       await get().loadUserInvestments();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error('Erreur lors de la création de l\'investissement:', error);
+      toast.error(error.message || 'Erreur lors de la création de l\'investissement');
       throw error;
     }
   },

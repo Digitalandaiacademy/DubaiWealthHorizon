@@ -24,6 +24,7 @@ import Referral from './pages/dashboard/Referral';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import AdminPayments from './pages/dashboard/AdminPayments';
 import AdminWithdrawals from './pages/dashboard/AdminWithdrawals';
+import VerifyPayment from './pages/dashboard/VerifyPayment';
 import PrivateRoute from './components/PrivateRoute';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -174,103 +175,25 @@ function App() {
 
           {/* Routes du tableau de bord (protégées) */}
           <Route
-            path="/dashboard"
+            path="/dashboard/*"
             element={
               <PrivateRoute>
                 <DashboardLayout>
-                  <Dashboard />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/investments"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <Investments />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/investments/new"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <NewInvestment />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/referral"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <Referral />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/transactions"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <Transactions />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/withdrawals"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <Withdrawals />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/profile"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <Profile />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-
-          {/* Routes d'administration */}
-          <Route
-            path="/dashboard/admin"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <AdminDashboard />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/admin/payments"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <AdminPayments />
-                </DashboardLayout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard/admin/withdrawals"
-            element={
-              <PrivateRoute>
-                <DashboardLayout>
-                  <AdminWithdrawals />
+                  <Routes>
+                    <Route index element={<Dashboard />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="investments" element={<Investments />} />
+                    <Route path="invest" element={<NewInvestment />} />
+                    <Route path="verify-payment" element={<VerifyPayment />} />
+                    <Route path="transactions" element={<Transactions />} />
+                    <Route path="withdrawals" element={<Withdrawals />} />
+                    <Route path="referral" element={<Referral />} />
+                    
+                    {/* Routes d'administration */}
+                    <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="admin/payments" element={<AdminPayments />} />
+                    <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
+                  </Routes>
                 </DashboardLayout>
               </PrivateRoute>
             }
