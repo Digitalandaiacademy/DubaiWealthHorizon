@@ -95,6 +95,46 @@ const VerifyPayment = () => {
     }
   };
 
+  const handleCancel = async () => {
+    try {
+      // Trouver le paiement en attente pour l'utilisateur
+      const { data: pendingPayment, error: findError } = await supabase
+        .from('payment_verifications')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'pending')
+        .single();
+
+      if (findError) {
+        console.error('Erreur lors de la recherche du paiement:', findError);
+        return navigate('/dashboard/investments');
+      }
+
+      if (pendingPayment) {
+        // Mettre à jour le statut à rejected
+        const { error: updateError } = await supabase
+          .from('payment_verifications')
+          .update({
+            status: 'rejected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pendingPayment.id);
+
+        if (updateError) {
+          console.error('Erreur lors de l\'annulation:', updateError);
+          toast.error('Erreur lors de l\'annulation du paiement');
+        } else {
+          toast.success('Paiement annulé avec succès');
+        }
+      }
+
+      navigate('/dashboard/investments');
+    } catch (error) {
+      console.error('Erreur:', error);
+      navigate('/dashboard/investments');
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-8">
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -118,7 +158,7 @@ const VerifyPayment = () => {
 
           <div className="flex justify-end space-x-4">
             <button
-              onClick={() => navigate('/dashboard/investments')}
+              onClick={handleCancel}
               className="px-4 py-2 border text-gray-700 rounded-md hover:bg-gray-50"
             >
               Annuler
