@@ -480,7 +480,7 @@ const NewInvestment = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       console.log("Clicking WhatsApp button...");
-                      const message = `Bonjour, je suis ${profile?.full_name}\nNuméro: ${profile?.phone_number}\nEmail: ${profile?.email}\nMontant: ${selectedPlan?.price.toLocaleString('fr-FR')} FCFA\nPlan: ${selectedPlan?.name}\n\nVoici la capture du paiement/transaction.`;
+                      const message = `Bonjour, je suis ${profile?.full_name}, au numéro ${profile?.phone_number} et email ${profile?.email}. Je viens d'effectuer une demande d'investissement d'un montant de ${selectedPlan?.price.toLocaleString('fr-FR')} FCFA pour le plan ${selectedPlan?.name}. Je joins la capture d'écran du paiement en ligne ainsi que celle de Izichange.`;
                       const whatsappUrl = `https://wa.me/2348062450400?text=${encodeURIComponent(message)}`;
                       console.log("Opening WhatsApp URL:", whatsappUrl);
                       window.open(whatsappUrl, '_blank');
@@ -504,7 +504,7 @@ const NewInvestment = () => {
                       e.preventDefault();
                       console.log("Clicking Telegram button...");
                       const message = `Bonjour, je suis ${profile?.full_name}\nNuméro: ${profile?.phone_number}\nEmail: ${profile?.email}\nMontant: ${selectedPlan?.price.toLocaleString('fr-FR')} FCFA\nPlan: ${selectedPlan?.name}\n\nVoici la capture du paiement/transaction.`;
-                      const telegramUrl = `https://t.me/DubaiWealthHorizon`;
+                      const telegramUrl = `https://t.me/Dubaiwealthinvest_supports`;
                       console.log("Opening Telegram URL:", telegramUrl);
                       window.open(telegramUrl, '_blank');
                       setHasClickedMessaging(true);
