@@ -63,7 +63,7 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
         .single();
 
       if (cycleError) throw cycleError;
-      const cycleDays = parseInt(cycleData?.value || '90');
+      const cycleDays = parseInt(cycleData?.value || '60');
 
       // Charger les investissements
       const { data, error } = await supabase
@@ -156,7 +156,7 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
         const now = new Date();
         const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Si l'investissement a plus de 90 jours, le marquer comme terminé
+        // Si l'investissement a plus de 60 jours, le marquer comme terminé
         if (daysDiff >= investment.cycle_days) {
           const { error } = await supabase
             .from('user_investments')

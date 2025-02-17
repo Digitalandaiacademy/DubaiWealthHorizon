@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 const Simulator = () => {
   const [amount, setAmount] = useState<number>(50000);
   const [selectedPlan, setSelectedPlan] = useState<string>('Plan Or');
-  const [duration, setDuration] = useState<number>(90);
+  const [duration, setDuration] = useState<number>(60);
   const [results, setResults] = useState({
     dailyReturn: 0,
     weeklyReturn: 0,
@@ -15,18 +15,18 @@ const Simulator = () => {
   });
 
   const plans = [
-    { name: 'Plan Bronze', roi: 0.8, minAmount: 5000 },
-    { name: 'Plan Argent', roi: 1.0, minAmount: 7500 },
-    { name: 'Plan Or', roi: 1.2, minAmount: 10000 },
-    { name: 'Plan Platine', roi: 1.5, minAmount: 12500 },
-    { name: 'Plan Saphir', roi: 1.8, minAmount: 15000 },
-    { name: 'Plan Émeraude', roi: 2.0, minAmount: 20000 },
-    { name: 'Plan Rubis', roi: 2.2, minAmount: 25000 },
-    { name: 'Plan Diamant', roi: 2.5, minAmount: 50000 },
-    { name: 'Plan Royal', roi: 3.0, minAmount: 100000 },
-    { name: 'Plan Impérial', roi: 3.5, minAmount: 250000 },
-    { name: 'Plan Légendaire', roi: 4.0, minAmount: 500000 },
-    { name: 'Plan Suprême', roi: 4.5, minAmount: 750000 }
+    { name: 'Plan Bronze', roi: 4.0, minAmount: 5000 },
+    { name: 'Plan Argent', roi: 4.1, minAmount: 7500 },
+    { name: 'Plan Or', roi: 4.2, minAmount: 10000 },
+    { name: 'Plan Platine', roi: 4.5, minAmount: 12500 },
+    { name: 'Plan Saphir', roi: 4.6, minAmount: 15000 },
+    { name: 'Plan Émeraude', roi: 4.8, minAmount: 20000 },
+    { name: 'Plan Rubis', roi: 4.9, minAmount: 25000 },
+    { name: 'Plan Diamant', roi: 5.0, minAmount: 50000 },
+    { name: 'Plan Royal', roi: 5.0, minAmount: 100000 },
+    { name: 'Plan Impérial', roi: 5.1, minAmount: 250000 },
+    { name: 'Plan Légendaire', roi: 5.6, minAmount: 500000 },
+    { name: 'Plan Suprème', roi: 6.0, minAmount: 750000 }
   ];
 
   useEffect(() => {

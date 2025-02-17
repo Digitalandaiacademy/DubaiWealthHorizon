@@ -19,9 +19,9 @@ const Investment = () => {
       color: 'from-amber-500 to-amber-700',
       textColor: 'text-amber-600',
       borderColor: 'border-amber-200',
-      rendement: '0.8%',
+      rendement: '4%',
       features: [
-        'Rendement quotidien de 0.8%',
+        'Rendement quotidien de 4%',
         'Retrait minimum: 1,000 FCFA',
         'Support 24/7',
         'Tableau de bord basique'
@@ -33,9 +33,9 @@ const Investment = () => {
       color: 'from-gray-400 to-gray-600',
       textColor: 'text-gray-600',
       borderColor: 'border-gray-200',
-      rendement: '1%',
+      rendement: '4.1%',
       features: [
-        'Rendement quotidien de 1%',
+        'Rendement quotidien de 4.1%',
         'Retrait minimum: 1,500 FCFA',
         'Support prioritaire',
         'Tableau de bord personnalisé'
@@ -47,9 +47,9 @@ const Investment = () => {
       color: 'from-yellow-500 to-yellow-700',
       textColor: 'text-yellow-600',
       borderColor: 'border-yellow-200',
-      rendement: '1.2%',
+      rendement: '4.2%',
       features: [
-        'Rendement quotidien de 1.2%',
+        'Rendement quotidien de 4.2%',
         'Retrait minimum: 2,000 FCFA',
         'Support VIP',
         'Accès aux statistiques avancées'
@@ -61,9 +61,9 @@ const Investment = () => {
       color: 'from-slate-600 to-slate-800',
       textColor: 'text-slate-600',
       borderColor: 'border-slate-200',
-      rendement: '1.5%',
+      rendement: '4.5%',
       features: [
-        'Rendement quotidien de 1.5%',
+        'Rendement quotidien de 4.5%',
         'Retrait minimum: 2,500 FCFA',
         'Support dédié',
         'Analyses de marché'
@@ -75,9 +75,9 @@ const Investment = () => {
       color: 'from-blue-500 to-blue-700',
       textColor: 'text-blue-600',
       borderColor: 'border-blue-200',
-      rendement: '1.8%',
+      rendement: '4.6%',
       features: [
-        'Rendement quotidien de 1.8%',
+        'Rendement quotidien de 4.6%',
         'Retrait minimum: 3,000 FCFA',
         'Conseiller personnel',
         'Rapports détaillés'
@@ -89,9 +89,9 @@ const Investment = () => {
       color: 'from-emerald-500 to-emerald-700',
       textColor: 'text-emerald-600',
       borderColor: 'border-emerald-200',
-      rendement: '2%',
+      rendement: '4.8%',
       features: [
-        'Rendement quotidien de 2%',
+        'Rendement quotidien de 4.8%',
         'Retrait minimum: 4,000 FCFA',
         'Conseiller VIP',
         'Accès événements exclusifs'
@@ -103,9 +103,9 @@ const Investment = () => {
       color: 'from-red-500 to-red-700',
       textColor: 'text-red-600',
       borderColor: 'border-red-200',
-      rendement: '2.2%',
+      rendement: '4.9%',
       features: [
-        'Rendement quotidien de 2.2%',
+        'Rendement quotidien de 4.9%',
         'Retrait minimum: 5,000 FCFA',
         'Service conciergerie',
         'Bonus mensuels'
@@ -117,9 +117,9 @@ const Investment = () => {
       color: 'from-violet-500 to-violet-700',
       textColor: 'text-violet-600',
       borderColor: 'border-violet-200',
-      rendement: '2.5%',
+      rendement: '5%',
       features: [
-        'Rendement quotidien de 2.5%',
+        'Rendement quotidien de 5%',
         'Retrait minimum: 10,000 FCFA',
         'Service premium',
         'Bonus trimestriels'
@@ -131,9 +131,9 @@ const Investment = () => {
       color: 'from-purple-500 to-purple-700',
       textColor: 'text-purple-600',
       borderColor: 'border-purple-200',
-      rendement: '3%',
+      rendement: '5%',
       features: [
-        'Rendement quotidien de 3%',
+        'Rendement quotidien de 5%',
         'Retrait minimum: 20,000 FCFA',
         'Service ultra-premium',
         'Bonus spéciaux'
@@ -145,9 +145,9 @@ const Investment = () => {
       color: 'from-indigo-500 to-indigo-700',
       textColor: 'text-indigo-600',
       borderColor: 'border-indigo-200',
-      rendement: '3.5%',
+      rendement: '5.1%',
       features: [
-        'Rendement quotidien de 3.5%',
+        'Rendement quotidien de 5.1%',
         'Retrait minimum: 50,000 FCFA',
         'Service élite',
         'Avantages exclusifs'
@@ -159,9 +159,9 @@ const Investment = () => {
       color: 'from-fuchsia-500 to-fuchsia-700',
       textColor: 'text-fuchsia-600',
       borderColor: 'border-fuchsia-200',
-      rendement: '4%',
+      rendement: '5.6%',
       features: [
-        'Rendement quotidien de 4%',
+        'Rendement quotidien de 5.6%',
         'Retrait minimum: 100,000 FCFA',
         'Service légendaire',
         'Avantages illimités'
@@ -173,9 +173,9 @@ const Investment = () => {
       color: 'from-rose-500 to-rose-700',
       textColor: 'text-rose-600',
       borderColor: 'border-rose-200',
-      rendement: '4.5%',
+      rendement: '6%',
       features: [
-        'Rendement quotidien de 4.5%',
+        'Rendement quotidien de 6%',
         'Retrait minimum: 150,000 FCFA',
         'Service suprême',
         'Privilèges exclusifs'
