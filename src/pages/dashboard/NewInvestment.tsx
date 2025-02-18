@@ -352,7 +352,7 @@ const NewInvestment = () => {
                     ) : (
                       <div className="space-y-4">
                         <ol className="list-decimal pl-5 space-y-2">
-                          <li>Copiez l'adresse <span className="font-medium">P1052009976</span> <button onClick={() => navigator.clipboard.writeText('P1052009976')} className="text-blue-600 hover:text-blue-800 text-sm ml-2">(Copier)</button></li>
+                          <li>Copiez l'adresse <span className="font-medium">P1052009976</span></li>
                           <li>Effectuez le paiement</li>
                           <li>Revenez dans le site</li>
                           <li>Envoyez la capture d'écran du paiement OM, MoMo, Moov etc ou celui de Izichange par WhatsApp</li>
