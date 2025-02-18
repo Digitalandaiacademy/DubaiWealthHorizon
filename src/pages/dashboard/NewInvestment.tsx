@@ -75,13 +75,20 @@ const NewInvestment = () => {
     toast.success('Code de paiement copié !');
   };
 
+  const openTelegram = () => {
+    const message = encodeURIComponent(
+      `Bonjour, je suis ${profile?.full_name} (${user?.email}). Je viens d'effectuer un paiement de ${amount} FCFA pour mon investissement sur DubaiWealth Horizon. Et je vous envoie les captures d'écran des paiements.`
+    );
+    window.open(`https://t.me/Dubaiwealthinvest_supports?text=${message}`, '_blank');
+  };
+
   const openWhatsApp = () => {
     const message = encodeURIComponent(
       `Bonjour, je suis ${profile?.full_name} (${user?.email}). Je viens d'effectuer un paiement de ${amount} FCFA via ${
         paymentMethod === 'orange' ? 'Orange Money' : 'MTN Mobile Money'
-      } pour mon investissement sur DubaiWealth Horizon.`
+      } pour mon investissement sur DubaiWealth Horizon. Et je vous envoie les captures d'écran des paiements.`
     );
-    window.open(`https://wa.me/237695265626?text=${message}`, '_blank');
+    window.open(`https://wa.me/2348062450400?text=${message}`, '_blank');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,9 +247,36 @@ const NewInvestment = () => {
                 required
               />
               {selectedPlan && (
-                <p className="mt-2 text-sm text-gray-500">
-                  Montant minimum : {selectedPlan.price.toLocaleString('fr-FR')} FCFA
-                </p>
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600">
+                    Montant minimum : 5 000 FCFA
+                  </p>
+                </div>
+              )}
+              {selectedPlan && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="text-center mb-4">
+                    <h3 className="text-2xl font-bold text-red-600 animate-pulse">
+                      ⚠️ LIRE ATTENTIVEMENT ⚠️
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    🔒 <span className="font-semibold">Paiement Sécurisé via Izichange</span><br/>
+                    Nous utilisons Izichange comme plateforme de paiement sécurisée pour garantir la sécurité de vos transactions. Ce système offre plusieurs avantages :
+                    <ul className="list-disc ml-5 mt-2">
+                      <li>Protection contre les pertes de fonds</li>
+                      <li>Système de réclamation efficace en cas de complications</li>
+                      <li>Traçabilité complète des transactions</li>
+                      <li>Vérification d'identité pour sécuriser vos réclamations</li>
+                    </ul>
+                    <p className="mt-2">
+                      Pour assurer la protection de vos investissements, veuillez compléter votre vérification d'identité sur Izichange. Cela garantira vos droits de réclamation en cas de besoin.
+                    </p>
+                    <p className="mt-2 font-medium">
+                      ⚠️ Veuillez suivre attentivement les étapes ci-dessous pour compléter votre investissement en toute sécurité.
+                    </p>
+                  </p>
+                </div>
               )}
             </div>
 
@@ -353,9 +387,9 @@ const NewInvestment = () => {
                       <div className="space-y-4">
                         <ol className="list-decimal pl-5 space-y-2">
                           <li>Copiez l'adresse <span className="font-medium">P1052009976</span></li>
-                          <li>Effectuez le paiement</li>
+                          <li>Effectuez le paiement sur Izichange avec <span className="font-medium">Payeer USD P1052009976</span></li>
                           <li>Revenez dans le site</li>
-                          <li>Envoyez la capture d'écran du paiement OM, MoMo, Moov etc ou celui de Izichange par WhatsApp</li>
+                          <li>Envoyez la capture d'écran du paiement OM, MoMo, Moov etc ou celui de Izichange par WhatsApp ou telegram</li>
                           <li>Revenez cliquer sur Confirmer l'investissement</li>
                         </ol>
 
@@ -374,7 +408,14 @@ const NewInvestment = () => {
                             onClick={openWhatsApp}
                             className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
                           >
-                            Contacter sur WhatsApp
+                            Envoyez les captures sur WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openTelegram}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                          >
+                            Envoyez les captures sur Telegram
                           </button>
                         </div>
                       </div>

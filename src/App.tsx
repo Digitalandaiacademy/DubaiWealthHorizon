@@ -31,6 +31,11 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminPayments from './pages/admin/AdminPayments';
 import AdminInvestments from './pages/admin/AdminInvestments';
 import AdminSettings from './pages/admin/AdminSettings';
+import ConditionsGenerales from './pages/legal/ConditionsGenerales';
+import MentionsLegales from './pages/legal/MentionsLegales';
+import PolitiqueConfidentialite from './pages/legal/PolitiqueConfidentialite';
+import Cookies from './pages/legal/Cookies';
+import Lexique from './pages/legal/Lexique';
 
 function App() {
   const { initialize, profile } = useAuthStore();
@@ -55,6 +60,11 @@ function App() {
           <Route path="/community" element={<PublicLayout><Community /></PublicLayout>} />
           <Route path="/simulator" element={<PublicLayout><Simulator /></PublicLayout>} />
           <Route path="/referral" element={<PublicLayout><Referral /></PublicLayout>} />
+          <Route path="/legal/conditions-generales" element={<PublicLayout><ConditionsGenerales /></PublicLayout>} />
+          <Route path="/legal/mentions-legales" element={<PublicLayout><MentionsLegales /></PublicLayout>} />
+          <Route path="/legal/politique-confidentialite" element={<PublicLayout><PolitiqueConfidentialite /></PublicLayout>} />
+          <Route path="/legal/cookies" element={<PublicLayout><Cookies /></PublicLayout>} />
+          <Route path="/legal/lexique" element={<PublicLayout><Lexique /></PublicLayout>} />
 
           {/* Routes du tableau de bord utilisateur */}
           <Route path="/dashboard" element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>

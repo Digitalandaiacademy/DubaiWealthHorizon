@@ -4,8 +4,8 @@ import { Building2, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react'
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-gray-900 text-white py-12">
+      <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center">
@@ -103,8 +103,41 @@ const Footer = () => {
           </div>
         </div>
 
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-4">Informations Légales</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/legal/conditions-generales" className="text-gray-400 hover:text-white">
+                  Conditions Générales
+                </Link>
+              </li>
+              <li>
+                <Link to="/legal/mentions-legales" className="text-gray-400 hover:text-white">
+                  Mentions Légales
+                </Link>
+              </li>
+              <li>
+                <Link to="/legal/politique-confidentialite" className="text-gray-400 hover:text-white">
+                  Politique de Confidentialité
+                </Link>
+              </li>
+              <li>
+                <Link to="/legal/cookies" className="text-gray-400 hover:text-white">
+                  Cookies
+                </Link>
+              </li>
+              <li>
+                <Link to="/legal/lexique" className="text-gray-400 hover:text-white">
+                  Lexique
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
         <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-          <p>© 2024 DubaiWealth Horizon. Tous droits réservés.</p>
+          <p> 2023 DubaiWealth Horizon. Tous droits réservés.</p>
         </div>
       </div>
     </footer>
