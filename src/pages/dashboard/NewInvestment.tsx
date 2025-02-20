@@ -95,9 +95,16 @@ const NewInvestment = () => {
     e.preventDefault();
     
     if (!selectedPlan) {
-      toast.error('Veuillez sélectionner un plan d\'investissement');
+      toast.error('Veuillez sélectionner un plan');
       return;
     }
+
+    if (amount < selectedPlan.min_amount) {
+      toast.error(`Le montant minimum pour le plan ${selectedPlan.name} est de ${selectedPlan.min_amount.toLocaleString()} FCFA`);
+      return;
+    }
+
+    const isValidAmount = amount >= selectedPlan.min_amount;
 
     setShowVerification(true);
 
@@ -246,12 +253,10 @@ const NewInvestment = () => {
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                 required
               />
-              {selectedPlan && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600">
-                    Montant minimum : 5 000 FCFA
-                  </p>
-                </div>
+              {selectedPlan && selectedPlan.min_amount && (
+                <span className="text-sm text-gray-600">
+                  Montant minimum : {selectedPlan.min_amount.toLocaleString()} FCFA
+                </span>
               )}
               {selectedPlan && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
@@ -475,10 +480,10 @@ const NewInvestment = () => {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={!hasClickedIzichange || !hasClickedPayment}
+                  disabled={!hasClickedIzichange || !hasClickedPayment || amount < selectedPlan.min_amount}
                   className={`
                     inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white
-                    ${!hasClickedIzichange || !hasClickedPayment
+                    ${!hasClickedIzichange || !hasClickedPayment || amount < selectedPlan.min_amount
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
                     }
@@ -493,13 +498,15 @@ const NewInvestment = () => {
                     "Confirmer l'investissement"
                   )}
                 </button>
-                {(!hasClickedIzichange || !hasClickedPayment) && (
+                {(!hasClickedIzichange || !hasClickedPayment || amount < selectedPlan.min_amount) && (
                   <p className="text-sm text-gray-500 mt-2">
                     {!hasClickedIzichange && !hasClickedPayment 
                       ? "Veuillez cliquer sur les deux boutons ci-dessus"
                       : !hasClickedIzichange 
                         ? "Veuillez cliquer sur 'Créer un compte Izichange'"
-                        : "Veuillez cliquer sur 'Effectuez le paiement si déjà inscrit'"
+                        : !hasClickedPayment 
+                          ? "Veuillez cliquer sur 'Effectuez le paiement si déjà inscrit'"
+                          : `Le montant minimum pour le plan ${selectedPlan.name} est de ${selectedPlan.min_amount.toLocaleString()} FCFA`
                     }
                   </p>
                 )}
