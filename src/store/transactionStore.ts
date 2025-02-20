@@ -23,9 +23,15 @@ interface TransactionState {
   totalWithdrawn: number;
   availableBalance: number;
   loadTransactions: () => Promise<void>;
-  createWithdrawal: (amount: number, paymentMethod: string, withdrawalInfo: WithdrawalInfo) => Promise<void>;
+  createWithdrawal: ({ amount, paymentMethod, paymentDetails, paymentCategory }: { amount: number | string, paymentMethod: string, paymentDetails: any, paymentCategory: string }) => Promise<any>;
   startAutoUpdate: () => void;
   stopAutoUpdate: () => void;
+  loadUserDetails: (userId: string) => Promise<{
+    full_name: string;
+    email: string;
+    created_at: string;
+  } | null>;
+  updateWithdrawalStatus: (withdrawalId: string, status: 'completed' | 'rejected') => Promise<any>;
 }
 
 export const useTransactionStore = create<TransactionState>((set, get) => {
@@ -113,59 +119,45 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
       }
     },
 
-    createWithdrawal: async (amount: number, paymentMethod: string, withdrawalInfo: WithdrawalInfo) => {
-      // Recharger les transactions pour avoir le solde le plus à jour
-      await get().loadTransactions();
-      
-      // Calculer les rendements avec le bon taux
-      const returns = await calculateReturns();
-      const transactions = get().transactions;
-      
-      // Calculer le solde disponible en prenant en compte les retraits en attente
-      const completedWithdrawals = transactions
-        .filter(t => t.type === 'withdrawal' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0);
+    createWithdrawal: async ({ amount, paymentMethod, paymentDetails, paymentCategory }) => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (!userData.user) {
+          throw new Error('Utilisateur non authentifié');
+        }
 
-      const pendingWithdrawals = transactions
-        .filter(t => t.type === 'withdrawal' && t.status === 'pending')
-        .reduce((sum, t) => sum + t.amount, 0);
+        // Convertir amount en nombre si ce n'est pas déjà un nombre
+        const withdrawalAmount = typeof amount === 'number' ? amount : Number(amount);
 
-      const availableBalance = Math.floor(returns - completedWithdrawals - pendingWithdrawals);
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: userData.user.id,
+            type: 'withdrawal',
+            amount: withdrawalAmount,
+            status: 'pending',
+            payment_details: {
+              ...paymentDetails,
+              paymentMethod,
+              paymentCategory
+            }
+          })
+          .select();
 
-      console.log('Debug - Store createWithdrawal:', {
-        amount,
-        returns,
-        completedWithdrawals,
-        pendingWithdrawals,
-        availableBalance
-      });
+        if (error) {
+          console.error('Erreur lors de la création du retrait:', error);
+          throw error;
+        }
 
-      if (amount > availableBalance) {
-        throw new Error('Solde insuffisant');
-      }
+        // Recharger les transactions après la création
+        await get().loadTransactions();
 
-      // Récupérer l'ID de l'utilisateur connecté
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) throw new Error('Utilisateur non connecté');
-
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'withdrawal',
-          amount,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
+        return data;
+      } catch (error) {
         console.error('Erreur lors de la création du retrait:', error);
         throw error;
       }
-
-      // Recharger les transactions après le retrait
-      await get().loadTransactions();
     },
 
     startAutoUpdate: () => {
@@ -176,11 +168,56 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
       }
     },
 
+    loadUserDetails: async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, email, created_at')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('Erreur lors du chargement des détails de l\'utilisateur:', error);
+        return null;
+      }
+    },
+
     stopAutoUpdate: () => {
       if (updateInterval) {
         clearInterval(updateInterval);
         updateInterval = null;
       }
-    }
+    },
+
+    updateWithdrawalStatus: async (withdrawalId: string, status: 'completed' | 'rejected') => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (!userData.user) {
+          throw new Error('Utilisateur non authentifié');
+        }
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({ status })
+          .eq('id', withdrawalId)
+          .select();
+
+        if (error) {
+          console.error('Erreur lors de la mise à jour du retrait:', error);
+          throw error;
+        }
+
+        // Recharger les transactions après la mise à jour
+        await get().loadTransactions();
+
+        return data;
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du retrait:', error);
+        throw error;
+      }
+    },
   };
 });

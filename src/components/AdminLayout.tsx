@@ -7,7 +7,8 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -40,6 +41,11 @@ const AdminLayout = () => {
       title: 'Paiements',
       icon: <CreditCard className="h-5 w-5" />,
       path: '/admin/payments'
+    },
+    {
+      title: 'Retraits',
+      icon: <Wallet className="h-5 w-5" />,
+      path: '/admin/withdrawals'
     },
     {
       title: 'Investissements',

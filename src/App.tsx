@@ -36,6 +36,7 @@ import MentionsLegales from './pages/legal/MentionsLegales';
 import PolitiqueConfidentialite from './pages/legal/PolitiqueConfidentialite';
 import Cookies from './pages/legal/Cookies';
 import Lexique from './pages/legal/Lexique';
+import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 
 function App() {
   const { initialize, profile } = useAuthStore();
@@ -90,6 +91,7 @@ function App() {
             <Route path="payments" element={<AdminPayments />} />
             <Route path="investments" element={<AdminInvestments />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="withdrawals" element={<AdminWithdrawals />} />
           </Route>
         </Routes>
         <Toaster position="top-right" />

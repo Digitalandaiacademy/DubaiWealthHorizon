@@ -1,47 +1,99 @@
 import React from 'react';
-import { Phone, CreditCard, Banknote } from 'lucide-react';
+import { Wallet, CreditCard } from 'lucide-react';
 
-const PaymentMethods = () => {
+interface PaymentMethodsProps {
+  onSelect: (method: string, category: string) => void;
+}
+
+const PaymentMethods: React.FC<PaymentMethodsProps> = ({ onSelect }) => {
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+
+  const paymentCategories = {
+    'electronic': {
+      title: 'Paiement électronique et mobile',
+      methods: [
+        'Orange Money',
+        'MTN Mobile Money',
+        'Moov',
+        'Wave',
+        'Airtel',
+        'YAS',
+        'MPESA',
+        'Safari',
+        'Volet USD',
+        'Volet Euro',
+        'MoneyGO USD',
+        'MoneyGO EURO'
+      ]
+    },
+    'crypto': {
+      title: 'Paiement en cryptomonnaie',
+      methods: [
+        'Payeer USD',
+        'Payeer EUR',
+        'BTC Bep20',
+        'USDT (TRC20)',
+        'ETH (ERC20)',
+        'Doge',
+        'Shiba ERC20'
+      ]
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Modes de Paiement</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex items-start space-x-4">
-          <Phone className="h-8 w-8 text-orange-500 mt-1" />
-          <div>
-            <h4 className="font-semibold text-gray-900">Mobile Money</h4>
-            <p className="text-gray-600 text-sm mt-1">Orange Money Cameroun</p>
-            <p className="text-gray-600 text-sm">MTN Mobile Money</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-4">
-          <Phone className="h-8 w-8 text-green-500 mt-1" />
-          <div>
-            <h4 className="font-semibold text-gray-900">WhatsApp</h4>
-            <p className="text-gray-600 text-sm mt-1">Support direct 24/7</p>
-            <p className="text-gray-600 text-sm">+237 XX XX XX XX</p>
+    <div className="space-y-6">
+      {/* Categories */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className={`p-4 rounded-lg border cursor-pointer transition-all ${
+            selectedCategory === 'electronic'
+              ? 'border-orange-500 bg-orange-50'
+              : 'border-gray-200 hover:border-orange-300'
+          }`}
+          onClick={() => setSelectedCategory('electronic')}
+        >
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-6 w-6 text-orange-500" />
+            <h3 className="font-semibold">{paymentCategories.electronic.title}</h3>
           </div>
         </div>
 
-        <div className="flex items-start space-x-4">
-          <CreditCard className="h-8 w-8 text-blue-500 mt-1" />
-          <div>
-            <h4 className="font-semibold text-gray-900">Carte Bancaire</h4>
-            <p className="text-gray-600 text-sm mt-1">Visa & Mastercard</p>
-            <p className="text-gray-600 text-sm">Paiement sécurisé</p>
-          </div>
-        </div>
-
-        <div className="flex items-start space-x-4">
-          <Banknote className="h-8 w-8 text-blue-600 mt-1" />
-          <div>
-            <h4 className="font-semibold text-gray-900">PayPal</h4>
-            <p className="text-gray-600 text-sm mt-1">Paiement international</p>
-            <p className="text-gray-600 text-sm">Protection acheteur</p>
+        <div
+          className={`p-4 rounded-lg border cursor-pointer transition-all ${
+            selectedCategory === 'crypto'
+              ? 'border-purple-500 bg-purple-50'
+              : 'border-gray-200 hover:border-purple-300'
+          }`}
+          onClick={() => setSelectedCategory('crypto')}
+        >
+          <div className="flex items-center gap-3">
+            <Wallet className="h-6 w-6 text-purple-500" />
+            <h3 className="font-semibold">{paymentCategories.crypto.title}</h3>
           </div>
         </div>
       </div>
+
+      {/* Methods */}
+      {selectedCategory && (
+        <div className="mt-6">
+          <h4 className="text-lg font-semibold mb-4">
+            Sélectionnez votre méthode de paiement
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {paymentCategories[selectedCategory as keyof typeof paymentCategories].methods.map(
+              (method) => (
+                <button
+                  key={method}
+                  className="p-3 text-sm border rounded-lg hover:bg-gray-50 transition-colors text-left"
+                  onClick={() => onSelect(method, selectedCategory)}
+                >
+                  {method}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
