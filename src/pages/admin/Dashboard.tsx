@@ -44,6 +44,11 @@ const AdminDashboard = () => {
     dailyROI: 0,
     monthlyData: []
   });
+  const [investmentTotals, setInvestmentTotals] = useState({
+    pending: 0,
+    verified: 0,
+    rejected: 0
+  });
 
   useEffect(() => {
     if (!profile?.is_admin) {
@@ -57,63 +62,85 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
 
-      // Charger les statistiques de base
-      const [
-        { count: totalUsers },
-        { count: totalInvestments },
-        { count: activeInvestments },
-        { count: pendingPayments }
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('user_investments').select('*', { count: 'exact', head: true }),
-        supabase.from('user_investments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('payment_verifications').select('*', { count: 'exact', head: true }).eq('status', 'pending')
-      ]);
+      // Vérification de l'authentification
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Utilisateur connecté:', user);
 
-      // Calculer le ROI quotidien total
-      const { data: investments } = await supabase
+      // Requête brute pour vérifier le contenu de la table
+      const { data: rawInvestments, error: rawError } = await supabase
         .from('user_investments')
-        .select('amount, investment_plans(daily_roi)')
+        .select('*');
+
+      console.log('Requête Brute Investissements:', {
+        data: rawInvestments,
+        error: rawError,
+        count: rawInvestments?.length
+      });
+
+      // Requêtes détaillées pour chaque statut
+      const statuses = ['pending', 'active', 'rejected'];
+      const totalResults = {};
+
+      for (const status of statuses) {
+        const { data, error, count } = await supabase
+          .from('user_investments')
+          .select('amount', { count: 'exact' })
+          .eq('status', status);
+
+        console.log(`Investissements ${status}:`, {
+          data,
+          error,
+          count
+        });
+
+        totalResults[status] = data?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+      }
+
+      console.log('Totaux par statut:', totalResults);
+
+      // Mise à jour des totaux d'investissement
+      setInvestmentTotals({
+        pending: totalResults['pending'],
+        verified: totalResults['active'],
+        rejected: totalResults['rejected']
+      });
+
+      // Statistiques utilisateurs et paiements
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: activeInvestments } = await supabase
+        .from('user_investments')
+        .select('*', { count: 'exact', head: true })
         .eq('status', 'active');
 
-      const dailyROI = investments?.reduce((acc, inv) => {
-        return acc + (inv.amount * (inv.investment_plans?.daily_roi || 0) / 100);
-      }, 0) || 0;
+      const { count: pendingPayments } = await supabase
+        .from('payment_verifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
 
-      // Charger les données mensuelles
-      const { data: monthlyData } = await supabase
-        .from('user_investments')
-        .select('created_at, amount')
-        .order('created_at', { ascending: true });
-
-      const monthlyStats = processMonthlyData(monthlyData || []);
+      console.log('Statistiques finales:', {
+        totalUsers,
+        activeInvestments,
+        pendingPayments,
+        totalInvestments: totalResults['pending'] + totalResults['active']
+      });
 
       setStats({
         totalUsers: totalUsers || 0,
-        totalInvestments: totalInvestments || 0,
+        totalInvestments: Math.round(totalResults['pending'] + totalResults['active']),
         activeInvestments: activeInvestments || 0,
         pendingPayments: pendingPayments || 0,
-        dailyROI,
-        monthlyData: monthlyStats
+        dailyROI: 0, // À calculer si nécessaire
+        monthlyData: []
       });
+
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
+      console.error('Erreur globale lors du chargement des données:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const processMonthlyData = (data: any[]) => {
-    const monthlyMap = data.reduce((acc: any, { created_at, amount }) => {
-      const month = new Date(created_at).toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
-      acc[month] = (acc[month] || 0) + amount;
-      return acc;
-    }, {});
-
-    return Object.entries(monthlyMap).map(([month, amount]) => ({
-      month,
-      amount
-    }));
   };
 
   if (loading) {
@@ -126,6 +153,40 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Résumé des totaux d'investissements */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total En Attente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-yellow-600">
+              {investmentTotals.pending.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Vérifiés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">
+              {investmentTotals.verified.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Rejetés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">
+              {investmentTotals.rejected.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord Administrateur</h1>
 
       {/* Cartes de statistiques */}

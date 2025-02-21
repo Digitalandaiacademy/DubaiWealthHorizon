@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../utils/supabaseClient';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from 'react-hot-toast';
-import { Search, AlertCircle, Check, X, Eye } from 'lucide-react';
+import { 
+  Search, AlertCircle, Check, X, Eye, 
+  Calendar, Clock, BarChart 
+} from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -11,6 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 
 interface PaymentVerification {
   id: string;
@@ -44,6 +57,133 @@ const AdminPayments = () => {
   const [selectedPayment, setSelectedPayment] = useState<PaymentVerification | null>(null);
   const [transactionId, setTransactionId] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [totalAmount, setTotalAmount] = useState<{
+    pending: number;
+    verified: number;
+    rejected: number;
+  }>({
+    pending: 0,
+    verified: 0,
+    rejected: 0
+  });
+
+  const [investorEvolution, setInvestorEvolution] = useState([]);
+  const [activeInvestmentsEvolution, setActiveInvestmentsEvolution] = useState([]);
+  const [periodType, setPeriodType] = useState('month');
+  const [roiTotals, setRoiTotals] = useState({
+    totalRoi: 0,
+    roiByStatus: {
+      pending: 0,
+      verified: 0,
+      rejected: 0
+    }
+  });
+
+  const formatDate = (date: Date) => {
+    switch(periodType) {
+      case 'day':
+        return date.toLocaleDateString('fr-FR', { 
+          day: 'numeric', 
+          month: 'short' 
+        });
+      case 'week':
+        return `Semaine ${getWeekNumber(date)}`;
+      case 'month':
+      default:
+        return date.toLocaleDateString('fr-FR', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+    }
+  };
+
+  const getWeekNumber = (date: Date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  };
+
+  const loadInvestmentEvolution = async () => {
+    try {
+      // Requête pour l'évolution des investisseurs
+      const { data: investorData, error: investorError } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .order('created_at');
+
+      console.log('Données Investisseurs Brutes:', {
+        data: investorData,
+        error: investorError,
+        count: investorData?.length
+      });
+
+      // Requête pour l'évolution des investissements actifs
+      const { data: investmentData, error: investmentError } = await supabase
+        .from('user_investments')
+        .select('created_at, status')
+        .eq('status', 'active')
+        .order('created_at');
+
+      console.log('Données Investissements Brutes:', {
+        data: investmentData,
+        error: investmentError,
+        count: investmentData?.length
+      });
+
+      if (investorError || investmentError) {
+        throw new Error(investorError?.message || investmentError?.message);
+      }
+
+      // Grouper les données par période
+      const groupData = (data: any[]) => {
+        console.log('Données à grouper:', data);
+
+        const grouped = {};
+        data.forEach(item => {
+          const date = new Date(item.created_at);
+          let key;
+          
+          switch(periodType) {
+            case 'day':
+              key = formatDate(date);
+              break;
+            case 'week':
+              key = formatDate(date);
+              break;
+            case 'month':
+            default:
+              key = formatDate(date);
+          }
+
+          grouped[key] = (grouped[key] || 0) + 1;
+        });
+
+        const groupedArray = Object.entries(grouped).map(([period, count]) => ({
+          period,
+          count
+        })).sort((a, b) => 
+          new Date(a.period).getTime() - new Date(b.period).getTime()
+        );
+
+        console.log('Données Groupées:', groupedArray);
+        return groupedArray;
+      };
+
+      // Vérifier si les données existent avant de les traiter
+      const processedInvestorData = investorData?.length ? groupData(investorData) : [];
+      const processedInvestmentData = investmentData?.length ? groupData(investmentData) : [];
+
+      console.log('Données Investisseurs Traitées:', processedInvestorData);
+      console.log('Données Investissements Traitées:', processedInvestmentData);
+
+      setInvestorEvolution(processedInvestorData);
+      setActiveInvestmentsEvolution(processedInvestmentData);
+
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'évolution:', error);
+      toast.error('Impossible de charger les graphiques');
+    }
+  };
 
   useEffect(() => {
     if (!profile?.is_admin) {
@@ -51,11 +191,13 @@ const AdminPayments = () => {
       return;
     }
     loadPayments();
-  }, [profile, statusFilter]);
+    loadInvestmentEvolution();
+  }, [profile, statusFilter, periodType]);
 
   const loadPayments = async () => {
     try {
       setLoading(true);
+      
       const { data, error } = await supabase
         .from('payment_verifications')
         .select(`
@@ -76,6 +218,33 @@ const AdminPayments = () => {
 
       if (error) throw error;
       setPayments(data || []);
+
+      const totals = await Promise.all([
+        supabase
+          .from('payment_verifications')
+          .select('amount', { count: 'exact' })
+          .eq('status', 'pending'),
+        supabase
+          .from('payment_verifications')
+          .select('amount', { count: 'exact' })
+          .eq('status', 'verified'),
+        supabase
+          .from('payment_verifications')
+          .select('amount', { count: 'exact' })
+          .eq('status', 'rejected')
+      ]);
+
+      const calculateTotal = (result: any) => 
+        result.data?.reduce((sum: number, item: any) => sum + item.amount, 0) || 0;
+
+      setTotalAmount({
+        pending: calculateTotal(totals[0]),
+        verified: calculateTotal(totals[1]),
+        rejected: calculateTotal(totals[2])
+      });
+
+      calculateRoiTotals();
+
     } catch (error: any) {
       console.error('Erreur lors du chargement des paiements:', error);
       toast.error(error.message);
@@ -91,7 +260,6 @@ const AdminPayments = () => {
         return;
       }
 
-      // Mise à jour du paiement avec l'ID de transaction vérifié
       const { error: paymentError } = await supabase
         .from('payment_verifications')
         .update({
@@ -124,7 +292,6 @@ const AdminPayments = () => {
 
       if (updateError) throw updateError;
 
-      // Créer une notification pour l'utilisateur
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert({
@@ -144,8 +311,100 @@ const AdminPayments = () => {
     }
   };
 
+  const calculateRoiTotals = () => {
+    if (!payments) return {
+      totalRoi: 0,
+      roiByStatus: {
+        pending: 0,
+        verified: 0,
+        rejected: 0
+      }
+    };
+
+    const roiTotals = payments.reduce((acc, payment) => {
+      // Calculer le ROI en pourcentage
+      const initialAmount = payment.amount || 0;
+      const roiAmount = payment.investment_plans.daily_roi * initialAmount;
+      const roiPercentage = initialAmount > 0 
+        ? ((roiAmount - initialAmount) / initialAmount) * 100 
+        : 0;
+
+      // Accumuler par statut
+      switch (payment.status) {
+        case 'pending':
+          acc.roiByStatus.pending += roiAmount;
+          break;
+        case 'verified':
+          acc.roiByStatus.verified += roiAmount;
+          break;
+        case 'rejected':
+          acc.roiByStatus.rejected += roiAmount;
+          break;
+      }
+
+      // Total ROI
+      acc.totalRoi += roiAmount;
+
+      return acc;
+    }, {
+      totalRoi: 0,
+      roiByStatus: {
+        pending: 0,
+        verified: 0,
+        rejected: 0
+      }
+    });
+
+    console.log('Totaux ROI:', roiTotals);
+    setRoiTotals(roiTotals);
+  };
+
   return (
     <div className="space-y-6 p-6">
+      {/* Résumé des totaux */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total En Attente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-yellow-600">
+              {totalAmount.pending.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Vérifiés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">
+              {totalAmount.verified.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Rejetés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">
+              {totalAmount.rejected.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total ROI</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-blue-600">
+              {roiTotals.totalRoi.toLocaleString('fr-FR')} FCFA
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Vérification des Paiements</h1>
         
@@ -298,6 +557,79 @@ const AdminPayments = () => {
           </div>
         </div>
       )}
+
+      {/* Nouveaux graphiques */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Graphique Évolution des Investisseurs */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Évolution des Investisseurs</CardTitle>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => setPeriodType('day')}
+                  className={`p-2 rounded ${periodType === 'day' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Jour
+                </button>
+                <button 
+                  onClick={() => setPeriodType('week')}
+                  className={`p-2 rounded ${periodType === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Semaine
+                </button>
+                <button 
+                  onClick={() => setPeriodType('month')}
+                  className={`p-2 rounded ${periodType === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Mois
+                </button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={investorEvolution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#8884d8" 
+                  name="Nouveaux Investisseurs" 
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Graphique Évolution des Investissements Actifs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Évolution des Investissements Actifs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={activeInvestmentsEvolution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#82ca9d" 
+                  name="Investissements Actifs" 
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Modal de vérification */}
       {selectedPayment && (
