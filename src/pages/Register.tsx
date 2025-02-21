@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation(); 
   const { signUp } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -17,6 +18,18 @@ const Register = () => {
     referralCode: '',
     terms: false
   });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const refCode = searchParams.get('ref');
+
+    if (refCode) {
+      setFormData(prevData => ({
+        ...prevData,
+        referralCode: refCode
+      }));
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
