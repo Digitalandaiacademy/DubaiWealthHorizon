@@ -6,7 +6,7 @@ const Footer = () => {
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="space-y-4">
             <div className="flex items-center">
               <Building2 className="h-8 w-8 text-blue-400" />
@@ -101,11 +101,9 @@ const Footer = () => {
               </li>
             </ul>
           </div>
-        </div>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Informations Légales</h3>
+            <h3 className="text-lg font-semibold mb-4">Informations Légales</h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/legal/conditions-generales" className="text-gray-400 hover:text-white">
@@ -137,7 +135,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-          <p> 2023 DubaiWealth Horizon. Tous droits réservés.</p>
+          <p> 2023-2025 DubaiWealth Horizon. Tous droits réservés.</p>
         </div>
       </div>
     </footer>

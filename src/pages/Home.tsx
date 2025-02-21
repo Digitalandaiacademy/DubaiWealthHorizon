@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { TrendingUp, Users, DollarSign, Building2 } from 'lucide-react';
 import RealTimeSimulator from '../components/RealTimeSimulator';
 import InvestmentAnimation from '../components/InvestmentAnimation';
-import PaymentMethods from '../components/PaymentMethods';
 
 const Home = () => {
   const investmentPlans = [
@@ -301,8 +300,48 @@ const Home = () => {
       </section>
 
       {/* Payment Methods */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <PaymentMethods />
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Nos Méthodes de Paiement</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white shadow-lg rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-blue-600 mb-4">
+                Paiement électronique et mobile
+              </h3>
+              <ul className="space-y-3 text-gray-700">
+                <li>🟠 Orange Money</li>
+                <li>💛 MTN Mobile Money</li>
+                <li>🌊 Wave</li>
+                <li>📱 Moov</li>
+                <li>🚀 Airtel</li>
+                <li>💳 YAS</li>
+                <li>💰 MPESA</li>
+                <li>🌐 Safari</li>
+                <li>💵 Volet USD</li>
+                <li>💶 Volet Euro</li>
+                <li>💳 MoneyGO USD</li>
+                <li>💶 MoneyGO EURO</li>
+              </ul>
+            </div>
+            <div className="bg-white shadow-lg rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-green-600 mb-4">
+                Paiement en cryptomonnaie
+              </h3>
+              <ul className="space-y-3 text-gray-700">
+                <li>💳 Payeer USD</li>
+                <li>💶 Payeer EUR</li>
+                <li>₿ BTC Bep20</li>
+                <li>💱 USDT (TRC20)</li>
+                <li>💻 ETH (ERC20)</li>
+                <li>🐶 Doge</li>
+                <li>🦊 Shiba ERC20</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-8 text-gray-600">
+            Nous soutenons une large variété de méthodes de paiement pour votre commodité.
+          </p>
+        </div>
       </section>
 
       {/* CTA Section */}
