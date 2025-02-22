@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Activity, Monitor, MapPin, Clock } from 'lucide-react';
+import SessionTracker from '../../components/SessionTracker';
 
 interface UserSession {
   id: string;
-  user_id: string;
+  email: string;
+  full_name: string;
   device_info: {
     browser: string;
     os: string;
@@ -28,20 +30,6 @@ interface UserSession {
 const UserActivity = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadSessions();
-    const channel = supabase
-      .channel('user-activity')
-      .on('presence', { event: 'sync' }, () => {
-        loadSessions();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   const loadSessions = async () => {
     try {
@@ -66,6 +54,10 @@ const UserActivity = () => {
     }
   };
 
+  const handleSessionUpdate = (data: UserSession[]) => {
+    setSessions(data);
+  };
+
   const calculateDuration = (startTime: string) => {
     const start = new Date(startTime);
     const now = new Date();
@@ -81,8 +73,18 @@ const UserActivity = () => {
     }
   };
 
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  if (loading) {
+    return <div className="p-6">Chargement des sessions...</div>;
+  }
+
   return (
     <div className="p-6">
+      <SessionTracker onSessionUpdate={handleSessionUpdate} />
+      
       <h1 className="text-2xl font-bold mb-6">Activité des Utilisateurs</h1>
       
       <div className="grid gap-4">
@@ -90,12 +92,18 @@ const UserActivity = () => {
           <Card key={session.id} className="w-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-3">
-                {session.profiles.avatar_url && (
+                {session.profiles.avatar_url ? (
                   <img
                     src={session.profiles.avatar_url}
                     alt={session.profiles.full_name}
                     className="w-10 h-10 rounded-full"
                   />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span className="text-lg font-semibold">
+                      {session.profiles.full_name?.[0] || session.profiles.email[0].toUpperCase()}
+                    </span>
+                  </div>
                 )}
                 <div>
                   <CardTitle className="text-lg">

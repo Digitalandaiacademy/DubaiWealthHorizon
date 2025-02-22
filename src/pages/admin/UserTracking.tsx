@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Card } from '../../components/ui/card';
-import { Monitor, Globe, Clock, Circle } from 'lucide-react';
+import { Monitor, Globe, Clock, Circle, Users, BarChart, Activity } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface UserSession {
   id: string;
-  user_id: string;
   email: string;
   full_name: string;
   browser_info: {
@@ -17,14 +16,28 @@ interface UserSession {
   ip_address: string;
   last_active: string;
   created_at: string;
+  current_page?: string;
+}
+
+interface PageViewStats {
+  path: string;
+  count: number;
+  percentage: number;
+}
+
+interface BrowserStats {
+  name: string;
+  count: number;
+  percentage: number;
 }
 
 const UserTracking = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [pageViews, setPageViews] = useState<PageViewStats[]>([]);
+  const [browserStats, setBrowserStats] = useState<BrowserStats[]>([]);
 
   const fetchActiveSessions = async () => {
     try {
-      // Récupérer les utilisateurs actifs (dernière activité < 5 minutes)
       const fiveMinutesAgo = new Date();
       fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
@@ -47,15 +60,58 @@ const UserTracking = () => {
       }
 
       setSessions(activeUsers || []);
+      updateStats(activeUsers || []);
     } catch (error) {
       console.error('Erreur:', error);
     }
   };
 
+  const updateStats = (users: UserSession[]) => {
+    // Statistiques des navigateurs
+    const browserStats = users.reduce((acc: { [key: string]: number }, user) => {
+      if (user.browser_info?.browser) {
+        const browser = user.browser_info.browser;
+        acc[browser] = (acc[browser] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const totalBrowsers = Object.values(browserStats).reduce((a, b) => a + b, 0);
+
+    setBrowserStats(
+      Object.entries(browserStats)
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: (count / totalBrowsers) * 100
+        }))
+        .sort((a, b) => b.count - a.count)
+    );
+  };
+
   useEffect(() => {
     fetchActiveSessions();
-    const interval = setInterval(fetchActiveSessions, 30000); // Rafraîchir toutes les 30 secondes
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchActiveSessions, 30000);
+
+    const channel = supabase
+      .channel('user-tracking')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          fetchActiveSessions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
@@ -64,13 +120,62 @@ const UserTracking = () => {
         Suivi des Utilisateurs en Temps Réel
       </h1>
       
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Circle className="w-4 h-4 fill-green-500 text-green-500" />
-          Utilisateurs en ligne: {sessions.length}
-        </h2>
+      {/* Statistiques générales */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Utilisateurs en ligne
+          </h3>
+          <p className="text-3xl font-bold mt-2">{sessions.length}</p>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Monitor className="w-4 h-4" />
+            Navigateurs différents
+          </h3>
+          <p className="text-3xl font-bold mt-2">{browserStats.length}</p>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Adresses IP uniques
+          </h3>
+          <p className="text-3xl font-bold mt-2">
+            {new Set(sessions.map(s => s.ip_address)).size}
+          </p>
+        </Card>
       </div>
 
+      {/* Distribution des navigateurs */}
+      <Card className="mb-6 p-4">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Monitor className="w-5 h-5" />
+          Navigateurs utilisés
+        </h2>
+        <div className="space-y-2">
+          {browserStats.map((browser, index) => (
+            <div key={index} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+              <div className="flex-1">
+                <span className="text-sm font-medium">{browser.name}</span>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${browser.percentage}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded ml-2">
+                {browser.percentage.toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Liste des utilisateurs actifs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sessions.map((session) => (
           <Card key={session.id} className="p-4">
@@ -110,13 +215,6 @@ const UserTracking = () => {
                 <Clock className="w-4 h-4 mr-2" />
                 <span>
                   Dernière activité: {format(new Date(session.last_active), 'dd/MM/yyyy HH:mm:ss', { locale: fr })}
-                </span>
-              </div>
-
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>
-                  Compte créé le: {format(new Date(session.created_at), 'dd/MM/yyyy', { locale: fr })}
                 </span>
               </div>
             </div>
