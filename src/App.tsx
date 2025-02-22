@@ -37,6 +37,8 @@ import PolitiqueConfidentialite from './pages/legal/PolitiqueConfidentialite';
 import Cookies from './pages/legal/Cookies';
 import Lexique from './pages/legal/Lexique';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
+import UserActivity from './pages/admin/UserActivity';
+import UserTracking from './pages/admin/UserTracking';
 
 function App() {
   const { initialize, profile } = useAuthStore();
@@ -92,6 +94,8 @@ function App() {
             <Route path="investments" element={<AdminInvestments />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="withdrawals" element={<AdminWithdrawals />} />
+            <Route path="user-activity" element={<UserActivity />} />
+            <Route path="user-tracking" element={<UserTracking />} />
           </Route>
         </Routes>
         <Toaster position="top-right" />

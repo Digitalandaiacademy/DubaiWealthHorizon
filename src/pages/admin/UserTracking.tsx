@@ -1,102 +1,129 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Grid, Typography, Paper, Avatar, Chip } from '@mui/material';
-import { AdminLayout } from '@/components/AdminLayout';
-import { FiberManualRecord as StatusIcon } from '@mui/icons-material';
-import { io } from 'socket.io-client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Card } from '../../components/ui/card';
+import { Monitor, Globe, Clock, Circle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface UserSession {
   id: string;
-  userId: string;
-  username: string;
-  isOnline: boolean;
-  device: {
-    type: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  browser_info: {
     browser: string;
     os: string;
   };
-  location: {
-    country: string;
-    city: string;
-  };
-  currentPage: string;
-  connectionTime: Date;
-  lastActivity: Date;
+  ip_address: string;
+  last_active: string;
+  created_at: string;
 }
 
 const UserTracking = () => {
-  const [activeSessions, setActiveSessions] = useState<UserSession[]>([]);
-  const [totalOnline, setTotalOnline] = useState(0);
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+
+  const fetchActiveSessions = async () => {
+    try {
+      // Récupérer les utilisateurs actifs (dernière activité < 5 minutes)
+      const fiveMinutesAgo = new Date();
+      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+
+      const { data: activeUsers, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          last_active,
+          browser_info,
+          ip_address,
+          created_at
+        `)
+        .gt('last_active', fiveMinutesAgo.toISOString());
+
+      if (error) {
+        console.error('Erreur lors de la récupération des sessions:', error);
+        return;
+      }
+
+      setSessions(activeUsers || []);
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
 
   useEffect(() => {
-    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
-
-    socket.on('userSessions', (sessions: UserSession[]) => {
-      setActiveSessions(sessions);
-      setTotalOnline(sessions.filter(session => session.isOnline).length);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
+    fetchActiveSessions();
+    const interval = setInterval(fetchActiveSessions, 30000); // Rafraîchir toutes les 30 secondes
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <AdminLayout>
-      <Box p={3}>
-        <Typography variant="h4" gutterBottom>
-          Suivi des Utilisateurs en Temps Réel
-        </Typography>
-        
-        <Box mb={3}>
-          <Typography variant="h6">
-            Utilisateurs en ligne: {totalOnline}
-          </Typography>
-        </Box>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">
+        Suivi des Utilisateurs en Temps Réel
+      </h1>
+      
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <Circle className="w-4 h-4 fill-green-500 text-green-500" />
+          Utilisateurs en ligne: {sessions.length}
+        </h2>
+      </div>
 
-        <Grid container spacing={3}>
-          {activeSessions.map((session) => (
-            <Grid item xs={12} md={6} lg={4} key={session.id}>
-              <Paper elevation={3} sx={{ p: 2 }}>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <Avatar sx={{ mr: 2 }}>{session.username[0]}</Avatar>
-                  <Box>
-                    <Typography variant="h6">{session.username}</Typography>
-                    <Chip
-                      icon={<StatusIcon />}
-                      label={session.isOnline ? 'En ligne' : 'Déconnecté'}
-                      color={session.isOnline ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </Box>
-                </Box>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sessions.map((session) => (
+          <Card key={session.id} className="p-4">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                <span className="text-lg font-semibold">
+                  {session.full_name?.[0] || session.email[0].toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-semibold">{session.full_name || session.email}</h3>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <Circle className="w-2 h-2 mr-1.5 fill-green-500" />
+                  En ligne
+                </span>
+              </div>
+            </div>
 
-                <Typography variant="body2" gutterBottom>
-                  📍 {session.location.city}, {session.location.country}
-                </Typography>
-                
-                <Typography variant="body2" gutterBottom>
-                  💻 {session.device.browser} sur {session.device.os}
-                </Typography>
+            <div className="space-y-2 text-sm text-gray-600">
+              {session.browser_info && (
+                <div className="flex items-center">
+                  <Monitor className="w-4 h-4 mr-2" />
+                  <span>
+                    {session.browser_info.browser} sur {session.browser_info.os}
+                  </span>
+                </div>
+              )}
 
-                <Typography variant="body2" gutterBottom>
-                  📄 Page actuelle: {session.currentPage}
-                </Typography>
+              {session.ip_address && (
+                <div className="flex items-center">
+                  <Globe className="w-4 h-4 mr-2" />
+                  <span>IP: {session.ip_address}</span>
+                </div>
+              )}
 
-                <Typography variant="body2" gutterBottom>
-                  ⏰ Connecté depuis: {format(new Date(session.connectionTime), 'HH:mm:ss', { locale: fr })}
-                </Typography>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>
+                  Dernière activité: {format(new Date(session.last_active), 'dd/MM/yyyy HH:mm:ss', { locale: fr })}
+                </span>
+              </div>
 
-                <Typography variant="body2">
-                  🕒 Dernière activité: {format(new Date(session.lastActivity), 'HH:mm:ss', { locale: fr })}
-                </Typography>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </AdminLayout>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>
+                  Compte créé le: {format(new Date(session.created_at), 'dd/MM/yyyy', { locale: fr })}
+                </span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
 

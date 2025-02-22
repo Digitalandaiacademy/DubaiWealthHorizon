@@ -8,7 +8,9 @@ import {
   Settings,
   LogOut,
   TrendingUp,
-  Wallet
+  Wallet,
+  Activity,
+  UserCheck
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -36,6 +38,16 @@ const AdminLayout = () => {
       title: 'Utilisateurs',
       icon: <Users className="h-5 w-5" />,
       path: '/admin/users'
+    },
+    {
+      title: 'Activités Utilisateurs',
+      icon: <Activity className="h-5 w-5" />,
+      path: '/admin/user-activity'
+    },
+    {
+      title: 'Suivi Utilisateurs',
+      icon: <UserCheck className="h-5 w-5" />,
+      path: '/admin/user-tracking'
     },
     {
       title: 'Paiements',
