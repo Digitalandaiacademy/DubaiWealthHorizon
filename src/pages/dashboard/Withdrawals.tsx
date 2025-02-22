@@ -115,10 +115,10 @@ const Withdrawals = () => {
       setLoading(true);
       await createWithdrawal({
         amount: withdrawalAmount,
+        paymentMethod,
+        paymentCategory,
         paymentDetails: {
-          ...formData,
-          paymentCategory,
-          paymentMethod
+          ...formData
         }
       });
       toast.success('Demande de retrait envoyée avec succès');
@@ -171,6 +171,11 @@ const Withdrawals = () => {
               Méthode de paiement
             </label>
             <PaymentMethods onSelect={handlePaymentMethodSelect} />
+            {paymentMethod && (
+              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-700">Méthode sélectionnée: {paymentMethod}</p>
+              </div>
+            )}
           </div>
 
           {showForm && (

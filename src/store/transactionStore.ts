@@ -137,6 +137,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
             type: 'withdrawal',
             amount: withdrawalAmount,
             status: 'pending',
+            payment_method: paymentMethod,
             payment_details: {
               ...paymentDetails,
               paymentMethod,
