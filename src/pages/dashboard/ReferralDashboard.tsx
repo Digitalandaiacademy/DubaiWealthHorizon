@@ -4,6 +4,7 @@ import { Users, Copy, TrendingUp, Award, Share2, AlertCircle } from 'lucide-reac
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode.react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../../utils/supabaseClient';
 
 const ReferralDashboard = () => {
   const {
@@ -19,7 +20,33 @@ const ReferralDashboard = () => {
   const [selectedLevel, setSelectedLevel] = useState('all');
 
   useEffect(() => {
-    loadReferrals();
+    const fetchReferrals = async () => {
+      try {
+        await loadReferrals();
+        
+        // Logs de débogage détaillés
+        console.log('Données de parrainage:', {
+          referrals,
+          totalCommission,
+          activeReferrals,
+          loading
+        });
+      } catch (error) {
+        console.error('Erreur lors du chargement des filleuls:', error);
+      }
+    };
+
+    fetchReferrals();
+  }, []);
+
+  // Ajouter un log supplémentaire pour vérifier l'authentification
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Utilisateur connecté pour parrainage:', user);
+    };
+
+    checkAuth();
   }, []);
 
   const copyReferralLink = () => {
@@ -61,13 +88,106 @@ const ReferralDashboard = () => {
     ? referrals 
     : referrals.filter(r => r.level === parseInt(selectedLevel));
 
-  if (loading) {
+  const renderReferrals = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+
+    if (referrals.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <p>Vous n'avez pas encore de filleuls.</p>
+          <p>Partagez votre lien de parrainage pour commencer !</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-      </div>
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Filleul
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Niveau
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Investissements
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Commissions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {referrals.map((referral, index) => {
+            // Logs de débogage pour chaque filleul
+            console.log(`Détails du filleul ${index}:`, referral);
+
+            return (
+              <tr key={referral.id || index}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {referral.referred?.full_name || 'Nom non disponible'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {referral.referred?.email || 'Email non disponible'}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Niveau {referral.level || 1}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {referral.status === 'active' ? (
+                    <div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Investissement actif
+                      </span>
+                      {/* Afficher le montant de l'investissement si disponible */}
+                      {referral.total_investment && (
+                        <div className="mt-1 text-sm text-gray-600">
+                          {referral.total_investment.toLocaleString('fr-FR')} FCFA
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Pas d'investissement actif
+                    </span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {referral.total_commission ? (
+                    <div>
+                      <span className="text-green-600 font-semibold">
+                        {referral.total_commission.toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">Aucune commission</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     );
-  }
+  };
+
+  const safeActiveReferrals = activeReferrals || 0;
+  const safeTotalCommission = totalCommission || 0;
 
   return (
     <div className="space-y-8">
@@ -89,7 +209,7 @@ const ReferralDashboard = () => {
             <Users className="h-8 w-8 text-blue-600" />
             <div className="ml-4">
               <h3 className="text-sm font-medium text-gray-600">Filleuls Actifs</h3>
-              <p className="text-2xl font-bold text-blue-600">{activeReferrals}</p>
+              <p className="text-2xl font-bold text-blue-600">{safeActiveReferrals}</p>
             </div>
           </div>
         </div>
@@ -100,7 +220,7 @@ const ReferralDashboard = () => {
             <div className="ml-4">
               <h3 className="text-sm font-medium text-gray-600">Commissions Totales</h3>
               <p className="text-2xl font-bold text-green-600">
-                {totalCommission.toLocaleString('fr-FR')} FCFA
+                {safeTotalCommission.toLocaleString('fr-FR')} FCFA
               </p>
             </div>
           </div>
@@ -112,7 +232,7 @@ const ReferralDashboard = () => {
             <div className="ml-4">
               <h3 className="text-sm font-medium text-gray-600">Niveau</h3>
               <p className="text-2xl font-bold text-purple-600">
-                {activeReferrals >= 10 ? 'Expert' : activeReferrals >= 5 ? 'Avancé' : 'Débutant'}
+                {safeActiveReferrals >= 10 ? 'Expert' : safeActiveReferrals >= 5 ? 'Avancé' : 'Débutant'}
               </p>
             </div>
           </div>
@@ -188,55 +308,7 @@ const ReferralDashboard = () => {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Filleul
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Niveau
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Investissements
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Commission
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredReferrals.map((referral) => (
-                <tr key={referral.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {referral.referred_user.full_name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {referral.referred_user.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      Niveau {referral.level}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {referral.total_investments.toLocaleString('fr-FR')} FCFA
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {referral.total_commission.toLocaleString('fr-FR')} FCFA
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(referral.created_at).toLocaleDateString('fr-FR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {renderReferrals()}
         </div>
       </div>
     </div>
