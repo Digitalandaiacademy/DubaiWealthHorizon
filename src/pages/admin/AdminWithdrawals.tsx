@@ -21,11 +21,11 @@ interface Transaction {
     paymentMethod?: string;
     paymentCategory?: string;
   };
-  user?: {
+  user: {
     full_name: string;
     email: string;
     created_at: string;
-  };
+  } | null;
 }
 
 const AdminWithdrawals = () => {
@@ -124,14 +124,10 @@ const AdminWithdrawals = () => {
                     {withdrawal.amount.toLocaleString()} FCFA
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {withdrawal.payment_method || 'N/A'}
+                    {`Méthode: ${withdrawal.payment_details?.paymentMethod || withdrawal.payment_method || 'N/A'}`}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     <div>
-                      <p>Méthode: {withdrawal.payment_details?.paymentMethod}</p>
-                      <p>Catégorie: {withdrawal.payment_details?.paymentCategory === 'electronic' 
-                        ? 'Paiement électronique et mobile' 
-                        : 'Paiement en cryptomonnaie'}</p>
                       <p>Email: {withdrawal.user?.email || withdrawal.payment_details?.email || 'N/A'}</p>
                       {withdrawal.payment_details?.phoneNumber && (
                         <p>Tél: {withdrawal.payment_details.phoneNumber}</p>
