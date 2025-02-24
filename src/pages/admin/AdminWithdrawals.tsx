@@ -51,7 +51,7 @@ const AdminWithdrawals = () => {
     };
 
     fetchTransactions();
-  }, []);
+  }, [loadTransactions, transactions]);
 
   const handleStatusChange = async (withdrawalId: string, status: 'completed' | 'rejected') => {
     try {
