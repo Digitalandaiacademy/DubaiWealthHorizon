@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { useReferralStore } from '../../store/referralStore';
 import { Users, Copy, TrendingUp, Award, Share2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,8 +23,6 @@ const ReferralDashboard = () => {
     const fetchReferrals = async () => {
       try {
         await loadReferrals();
-        
-        // Logs de débogage détaillés
         console.log('Données de parrainage:', {
           referrals,
           totalCommission,
@@ -39,7 +37,6 @@ const ReferralDashboard = () => {
     fetchReferrals();
   }, []);
 
-  // Ajouter un log supplémentaire pour vérifier l'authentification
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -74,15 +71,37 @@ const ReferralDashboard = () => {
 
   const calculateLevelStats = (level: number) => {
     const levelReferrals = referrals.filter(r => r.level === level);
+    const activeReferrals = levelReferrals.filter(r => r.status === 'active');
+    
+    console.log(`Statistiques niveau ${level}:`, {
+      total: levelReferrals.length,
+      actifs: activeReferrals.length,
+      referrals: levelReferrals,
+      commissions: levelReferrals.map(r => ({
+        nom: r.referred.full_name,
+        commission: r.total_commission,
+        statut: r.status
+      }))
+    });
+
     return {
-      count: levelReferrals.length,
-      commission: levelReferrals.reduce((sum, r) => sum + r.total_commission, 0)
+      count: activeReferrals.length,
+      commission: levelReferrals.reduce((sum, r) => sum + (r.total_commission || 0), 0),
+      totalInvestment: levelReferrals.reduce((sum, r) => sum + (r.total_investment || 0), 0)
     };
   };
 
   const level1Stats = calculateLevelStats(1);
   const level2Stats = calculateLevelStats(2);
   const level3Stats = calculateLevelStats(3);
+
+  console.log('Statistiques globales:', {
+    niveau1: level1Stats,
+    niveau2: level2Stats,
+    niveau3: level3Stats,
+    totalCommission,
+    activeReferrals
+  });
 
   const filteredReferrals = selectedLevel === 'all' 
     ? referrals 
@@ -125,10 +144,8 @@ const ReferralDashboard = () => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {referrals.map((referral, index) => {
-            // Logs de débogage pour chaque filleul
-            console.log(`Détails du filleul ${index}:`, referral);
-
+          {filteredReferrals.map((referral, index) => {
+            const commissionRate = referral.level === 1 ? '5%' : referral.level === 2 ? '2%' : '1%';
             return (
               <tr key={referral.id || index}>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -148,35 +165,45 @@ const ReferralDashboard = () => {
                     Niveau {referral.level || 1}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {referral.status === 'active' ? (
-                    <div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Investissement actif
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${
+                        referral.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
+                      <span className={`font-medium ${
+                        referral.status === 'active' ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {referral.status === 'active' ? 'Actif' : 'Inactif'}
                       </span>
-                      {/* Afficher le montant de l'investissement si disponible */}
-                      {referral.total_investment && (
-                        <div className="mt-1 text-sm text-gray-600">
-                          {referral.total_investment.toLocaleString('fr-FR')} FCFA
-                        </div>
-                      )}
                     </div>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      Pas d'investissement actif
-                    </span>
-                  )}
+                    {referral.referred_investments && referral.referred_investments.length > 0 && (
+                      <div className="text-sm text-gray-600">
+                        <div className="font-medium">Investissements actifs:</div>
+                        {referral.referred_investments.map((inv, i) => (
+                          <div key={i} className="ml-2 text-xs">
+                            {(inv.amount || 0).toLocaleString('fr-FR')} FCFA
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {referral.total_commission ? (
-                    <div>
-                      <span className="text-green-600 font-semibold">
-                        {referral.total_commission.toLocaleString('fr-FR')} FCFA
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-500">Aucune commission</span>
-                  )}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="space-y-1">
+                    {(referral.total_commission || 0) > 0 ? (
+                      <Fragment>
+                        <div className="text-green-600 font-semibold">
+                          {(referral.total_commission || 0).toLocaleString('fr-FR')} FCFA
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ({commissionRate})
+                        </div>
+                      </Fragment>
+                    ) : (
+                      <span className="text-gray-500 text-sm">Aucune commission</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
@@ -293,7 +320,7 @@ const ReferralDashboard = () => {
       {/* Liste des filleuls */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Vos Filleuls</h2>
             <select
               value={selectedLevel}
@@ -305,6 +332,110 @@ const ReferralDashboard = () => {
               <option value="2">Niveau 2</option>
               <option value="3">Niveau 3</option>
             </select>
+          </div>
+
+          {/* Résumé des statistiques */}
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="text-sm text-blue-600 font-medium">Niveau 1 (5%)</div>
+              <div className="mt-1 space-y-2">
+                <div>
+                  <div className="text-xs text-gray-500">Filleuls actifs</div>
+                  <div className="text-lg font-semibold text-blue-700">{level1Stats.count}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total investi</div>
+                  <div className="text-sm font-medium text-blue-600">
+                    {(level1Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Commission</div>
+                  <div className="text-sm font-medium text-blue-600">
+                    {(level1Stats.commission || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="text-sm text-green-600 font-medium">Niveau 2 (2%)</div>
+              <div className="mt-1 space-y-2">
+                <div>
+                  <div className="text-xs text-gray-500">Filleuls actifs</div>
+                  <div className="text-lg font-semibold text-green-700">{level2Stats.count}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total investi</div>
+                  <div className="text-sm font-medium text-green-600">
+                    {(level2Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Commission</div>
+                  <div className="text-sm font-medium text-green-600">
+                    {(level2Stats.commission || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <div className="text-sm text-purple-600 font-medium">Niveau 3 (1%)</div>
+              <div className="mt-1 space-y-2">
+                <div>
+                  <div className="text-xs text-gray-500">Filleuls actifs</div>
+                  <div className="text-lg font-semibold text-purple-700">{level3Stats.count}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total investi</div>
+                  <div className="text-sm font-medium text-purple-600">
+                    {(level3Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Commission</div>
+                  <div className="text-sm font-medium text-purple-600">
+                    {(level3Stats.commission || 0).toLocaleString('fr-FR')} FCFA
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Barre de progression des commissions */}
+          <div className="mt-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">Répartition des commissions</div>
+            {(totalCommission || 0) > 0 && (
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full flex">
+                  <div 
+                    className="bg-blue-500" 
+                    style={{ width: `${(level1Stats.commission / totalCommission) * 100}%` }}
+                    title={`Niveau 1: ${level1Stats.commission.toLocaleString('fr-FR')} FCFA`}
+                  />
+                  <div 
+                    className="bg-green-500" 
+                    style={{ width: `${(level2Stats.commission / totalCommission) * 100}%` }}
+                    title={`Niveau 2: ${level2Stats.commission.toLocaleString('fr-FR')} FCFA`}
+                  />
+                  <div 
+                    className="bg-purple-500" 
+                    style={{ width: `${(level3Stats.commission / totalCommission) * 100}%` }}
+                    title={`Niveau 3: ${level3Stats.commission.toLocaleString('fr-FR')} FCFA`}
+                  />
+                </div>
+              </div>
+            )}
+            {(totalCommission || 0) > 0 ? (
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Niveau 1: {(((level1Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
+                <span>Niveau 2: {(((level2Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
+                <span>Niveau 3: {(((level3Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500 mt-1 text-center">
+                Aucune commission pour le moment
+              </div>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">

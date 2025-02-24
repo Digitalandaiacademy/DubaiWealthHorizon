@@ -109,6 +109,9 @@ const NewInvestment = () => {
     setShowVerification(true);
 
     try {
+      // Générer un ID de transaction unique
+      const generatedTransactionId = `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
       // Créer une vérification de paiement
       const { error: verificationError } = await supabase
         .from('payment_verifications')
@@ -118,7 +121,7 @@ const NewInvestment = () => {
           payment_method: paymentMethod,
           status: 'pending',
           investment_plan: selectedPlan.id,
-          transaction_id: null,  
+          transaction_id: generatedTransactionId,
           created_at: new Date().toISOString()
         });
 

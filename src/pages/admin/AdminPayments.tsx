@@ -28,13 +28,15 @@ import {
 interface PaymentVerification {
   id: string;
   transaction_id: string;
-  verified_transaction_id: string;
+  verified_transaction_id: string | null;
   user_id: string;
   amount: number;
   payment_method: string;
   status: string;
   created_at: string;
   verified_at: string | null;
+  rejected_at: string | null;
+  investment_id: string | null;
   profiles: {
     full_name: string;
     email: string;
@@ -45,7 +47,6 @@ interface PaymentVerification {
     price: number;
     daily_roi: number;
   };
-  investment_id: string;
 }
 
 const AdminPayments = () => {
@@ -67,8 +68,8 @@ const AdminPayments = () => {
     rejected: 0
   });
 
-  const [investorEvolution, setInvestorEvolution] = useState([]);
-  const [activeInvestmentsEvolution, setActiveInvestmentsEvolution] = useState([]);
+  const [investorEvolution, setInvestorEvolution] = useState<{ period: string; count: number }[]>([]);
+  const [activeInvestmentsEvolution, setActiveInvestmentsEvolution] = useState<{ period: string; count: number }[]>([]);
   const [periodType, setPeriodType] = useState('month');
   const [roiTotals, setRoiTotals] = useState({
     totalRoi: 0,
@@ -135,10 +136,10 @@ const AdminPayments = () => {
       }
 
       // Grouper les données par période
-      const groupData = (data: any[]) => {
+      const groupData = (data: { created_at: string }[]) => {
         console.log('Données à grouper:', data);
 
-        const grouped = {};
+        const grouped: Record<string, number> = {};
         data.forEach(item => {
           const date = new Date(item.created_at);
           let key;
@@ -198,10 +199,44 @@ const AdminPayments = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      type PaymentVerificationResponse = {
+        id: string;
+        transaction_id: string;
+        verified_transaction_id: string | null;
+        user_id: string;
+        amount: number;
+        payment_method: string;
+        status: string;
+        created_at: string;
+        verified_at: string | null;
+        rejected_at: string | null;
+        investment_id: string | null;
+        profiles: {
+          full_name: string;
+          email: string;
+          phone_number: string;
+        };
+        investment_plans: {
+          name: string;
+          price: number;
+          daily_roi: number;
+        };
+      };
+
+      const { data: paymentData, error } = await supabase
         .from('payment_verifications')
         .select(`
-          *,
+          id,
+          transaction_id,
+          verified_transaction_id,
+          user_id,
+          amount,
+          payment_method,
+          status,
+          created_at,
+          verified_at,
+          rejected_at,
+          investment_id,
           profiles (
             full_name,
             email,
@@ -217,7 +252,7 @@ const AdminPayments = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments((paymentData as PaymentVerificationResponse[]) || []);
 
       const totals = await Promise.all([
         supabase
@@ -255,24 +290,34 @@ const AdminPayments = () => {
 
   const handleVerifyPayment = async (payment: PaymentVerification) => {
     try {
-      if (!transactionId) {
-        toast.error("Veuillez entrer l'ID de la transaction");
-        return;
-      }
-
+      // Enregistrer l'ID de transaction vérifié
       const { error: paymentError } = await supabase
         .from('payment_verifications')
         .update({
-          verified_transaction_id: transactionId,
-          verified_at: new Date().toISOString()
+          verified_transaction_id: transactionId
         })
         .eq('id', payment.id);
 
       if (paymentError) throw paymentError;
 
-      toast.success("ID de transaction enregistré. En attente de la confirmation de l'utilisateur.");
+      // Créer une notification pour l'utilisateur
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: payment.user_id,
+          title: 'ID de Transaction Disponible',
+          message: `L'ID de transaction pour votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA est maintenant disponible.\n\n` +
+            `📋 ID de transaction : ${transactionId}\n` +
+            `💰 Montant : ${payment.amount.toLocaleString('fr-FR')} FCFA\n` +
+            `📈 Plan : ${payment.investment_plans.name}\n\n` +
+            `Pour valider votre investissement, veuillez vous rendre dans la section "Vérification de paiement" et entrer cet ID de transaction.`,
+          type: 'info'
+        });
+
+      if (notificationError) throw notificationError;
+
+      toast.success("Paiement vérifié avec succès. Une notification a été envoyée à l'utilisateur.");
       setSelectedPayment(null);
-      setTransactionId('');
       loadPayments();
     } catch (error: any) {
       console.error('Erreur lors de la vérification:', error);
@@ -462,6 +507,9 @@ const AdminPayments = () => {
                     Méthode
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID Transaction
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -512,6 +560,11 @@ const AdminPayments = () => {
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                           {payment.payment_method === 'orange' ? 'Orange Money' : 'MTN Mobile Money'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {payment.transaction_id}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(payment.created_at).toLocaleString('fr-FR')}
