@@ -72,7 +72,7 @@ const AdminPayments = () => {
 
   const [investorEvolution, setInvestorEvolution] = useState<{ period: string; count: number }[]>([]);
   const [activeInvestmentsEvolution, setActiveInvestmentsEvolution] = useState<{ period: string; count: number }[]>([]);
-  const [periodType, setPeriodType] = useState('month');
+  const [periodType, setPeriodType] = useState('day');
   const [roiTotals, setRoiTotals] = useState({
     totalRoi: 0,
     roiByStatus: {
@@ -82,7 +82,8 @@ const AdminPayments = () => {
     }
   });
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
     switch(periodType) {
       case 'day':
         return date.toLocaleDateString('fr-FR', { 
@@ -143,20 +144,7 @@ const AdminPayments = () => {
 
         const grouped: Record<string, number> = {};
         data.forEach(item => {
-          const date = new Date(item.created_at);
-          let key;
-          
-          switch(periodType) {
-            case 'day':
-              key = formatDate(date);
-              break;
-            case 'week':
-              key = formatDate(date);
-              break;
-            case 'month':
-            default:
-              key = formatDate(date);
-          }
+          const key = formatDate(item.created_at);
 
           grouped[key] = (grouped[key] || 0) + 1;
         });
@@ -175,6 +163,7 @@ const AdminPayments = () => {
       // Vérifier si les données existent avant de les traiter
       const processedInvestorData = investorData?.length ? groupData(investorData) : [];
       const processedInvestmentData = investmentData?.length ? groupData(investmentData) : [];
+      console.log('Données Investissements Traitées:', processedInvestmentData);
 
       console.log('Données Investisseurs Traitées:', processedInvestorData);
       console.log('Données Investissements Traitées:', processedInvestmentData);
