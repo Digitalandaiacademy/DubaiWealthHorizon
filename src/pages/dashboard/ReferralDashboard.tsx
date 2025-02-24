@@ -109,9 +109,27 @@ const ReferralDashboard = () => {
     activeReferrals
   });
 
-  const filteredReferrals = selectedLevel === 'all' 
-    ? referrals 
-    : (referralsByLevel[parseInt(selectedLevel) as 1 | 2] || []);
+  // Fonction pour obtenir les filleuls selon le niveau sélectionné
+  const getFilteredReferrals = () => {
+    switch (selectedLevel) {
+      case '1':
+        return referralsByLevel[1];
+      case '2':
+        return referralsByLevel[2];
+      default:
+        // Pour 'all', afficher d'abord les filleuls de niveau 1, puis ceux de niveau 2
+        return [
+          ...referralsByLevel[1],
+          ...referralsByLevel[2].filter(ref2 => 
+            // Exclure les filleuls de niveau 2 qui sont aussi des filleuls de niveau 1
+            !referralsByLevel[1].some(ref1 => ref1.referred_id === ref2.referred_id)
+          )
+        ];
+    }
+  };
+
+  const filteredReferrals = getFilteredReferrals();
+  const totalReferrals = referralsByLevel[1].length + referralsByLevel[2].length;
 
   const renderReferrals = () => {
     if (loading) {
@@ -239,8 +257,8 @@ const ReferralDashboard = () => {
           <div className="flex items-center">
             <Users className="h-8 w-8 text-blue-600" />
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Filleuls Actifs</h3>
-              <p className="text-2xl font-bold text-blue-600">{safeActiveReferrals}</p>
+              <h3 className="text-sm font-medium text-gray-600">Total Filleuls (Actifs)</h3>
+              <p className="text-2xl font-bold text-blue-600">{totalReferrals} ({safeActiveReferrals})</p>
             </div>
           </div>
         </div>
@@ -344,18 +362,18 @@ const ReferralDashboard = () => {
               <div className="mt-1 space-y-2">
                 <div>
                   <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
-                  <div className="text-lg font-semibold text-blue-700">{level1Stats.count} ({level1Stats.activeCount})</div>
+                  <div className="text-lg font-semibold text-blue-700">{referralsByLevel[1].length} ({referralsByLevel[1].filter(r => r.is_active).length})</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Total investi</div>
                   <div className="text-sm font-medium text-blue-600">
-                    {(level1Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
+                    {referralsByLevel[1].reduce((sum, r) => sum + r.total_investment, 0).toLocaleString('fr-FR')} FCFA
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Commission</div>
                   <div className="text-sm font-medium text-blue-600">
-                    {(level1Stats.commission || 0).toLocaleString('fr-FR')} FCFA
+                    {referralsByLevel[1].reduce((sum, r) => sum + r.total_commission, 0).toLocaleString('fr-FR')} FCFA
                   </div>
                 </div>
               </div>
@@ -365,18 +383,18 @@ const ReferralDashboard = () => {
               <div className="mt-1 space-y-2">
                 <div>
                   <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
-                  <div className="text-lg font-semibold text-green-700">{level2Stats.count} ({level2Stats.activeCount})</div>
+                  <div className="text-lg font-semibold text-green-700">{referralsByLevel[2].length} ({referralsByLevel[2].filter(r => r.is_active).length})</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Total investi</div>
                   <div className="text-sm font-medium text-green-600">
-                    {(level2Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
+                    {referralsByLevel[2].reduce((sum, r) => sum + r.total_investment, 0).toLocaleString('fr-FR')} FCFA
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Commission</div>
                   <div className="text-sm font-medium text-green-600">
-                    {(level2Stats.commission || 0).toLocaleString('fr-FR')} FCFA
+                    {referralsByLevel[2].reduce((sum, r) => sum + r.total_commission, 0).toLocaleString('fr-FR')} FCFA
                   </div>
                 </div>
               </div>

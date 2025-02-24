@@ -90,99 +90,87 @@ export const useReferralStore = create<ReferralState>((set) => ({
 
       console.log('Récupération des filleuls pour l\'utilisateur:', user.id);
 
-      // Récupérer les filleuls de niveau 1
-      const { data: level1Data, error: level1Error } = await supabase
-        .from('referral_status')
-        .select(`
-          *,
-          referred:profiles!referred_id (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('referrer_id', user.id);
+      // Récupérer les filleuls directs (niveau 1)
+      const { data: directReferrals, error: directError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, referred_by')
+        .eq('referred_by', user.id);
 
-      if (level1Error) throw level1Error;
+      if (directError) throw directError;
 
       // Récupérer les filleuls de niveau 2
-      const level2Promises = level1Data.map(async (level1Referral) => {
-        const { data: level2Data, error: level2Error } = await supabase
-          .from('referral_status')
-          .select(`
-            *,
-            referred:profiles!referred_id (
-              id,
-              full_name,
-              email
-            )
-          `)
-          .eq('referrer_id', level1Referral.referred_id);
+      const directReferralIds = directReferrals.map(ref => ref.id);
+      const { data: indirectReferrals, error: indirectError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, referred_by')
+        .in('referred_by', directReferralIds);
 
-        if (level2Error) throw level2Error;
-        return level2Data;
+      if (indirectError) throw indirectError;
+
+      // Récupérer les statuts des filleuls
+      const allReferralIds = [...directReferrals.map(ref => ref.id), ...indirectReferrals.map(ref => ref.id)];
+      const { data: referralStatuses, error: statusError } = await supabase
+        .from('referral_status')
+        .select('*')
+        .in('referred_id', allReferralIds);
+
+      if (statusError) throw statusError;
+
+      // Mapper les données pour le niveau 1
+      const level1Referrals = directReferrals.map(profile => {
+        const status = referralStatuses.find(rs => rs.referred_id === profile.id) || {};
+        return {
+          id: status.id || profile.id,
+          referrer_id: profile.referred_by,
+          referred_id: profile.id,
+          level: 1,
+          is_active: status.is_active || false,
+          total_investment: status.total_investment || 0,
+          total_commission: status.total_commission || 0,
+          last_investment_date: status.last_investment_date || null,
+          created_at: status.created_at || profile.created_at || new Date().toISOString(),
+          updated_at: status.updated_at || profile.created_at || new Date().toISOString(),
+          referred: {
+            full_name: profile.full_name,
+            email: profile.email
+          }
+        };
       });
 
-      const level2Results = await Promise.all(level2Promises);
-      const level2Data = level2Results.flat();
-
-      console.log('Données brutes des filleuls niveau 1:', JSON.stringify(level1Data, null, 2));
-      console.log('Données brutes des filleuls niveau 2:', JSON.stringify(level2Data, null, 2));
-
-      const mapReferral = (ref: any, level: number) => ({
-        id: ref.id,
-        referrer_id: ref.referrer_id,
-        referred_id: ref.referred_id,
-        level: level,
-        is_active: ref.is_active,
-        total_investment: ref.total_investment,
-        total_commission: ref.total_commission,
-        last_investment_date: ref.last_investment_date,
-        created_at: ref.created_at,
-        updated_at: ref.updated_at,
-        referred: {
-          id: ref.referred.id,
-          full_name: ref.referred.full_name,
-          email: ref.referred.email
-        }
+      // Mapper les données pour le niveau 2
+      const level2Referrals = indirectReferrals.map(profile => {
+        const status = referralStatuses.find(rs => rs.referred_id === profile.id) || {};
+        return {
+          id: status.id || profile.id,
+          referrer_id: profile.referred_by,
+          referred_id: profile.id,
+          level: 2,
+          is_active: status.is_active || false,
+          total_investment: status.total_investment || 0,
+          total_commission: status.total_commission || 0,
+          last_investment_date: status.last_investment_date || null,
+          created_at: status.created_at || profile.created_at || new Date().toISOString(),
+          updated_at: status.updated_at || profile.created_at || new Date().toISOString(),
+          referred: {
+            full_name: profile.full_name,
+            email: profile.email
+          }
+        };
       });
-
-      const level1Referrals = level1Data.map((ref: any) => mapReferral(ref, 1));
-      const level2Referrals = level2Data.map((ref: any) => mapReferral(ref, 2));
-
-      const referrals = [...level1Referrals, ...level2Referrals];
 
       const referralsByLevel = {
         1: level1Referrals,
         2: level2Referrals
       };
 
-      const totalCommission = referrals.reduce((sum, ref) => sum + ref.total_commission, 0);
-      const activeReferralsCount = referrals.filter(ref => ref.is_active).length;
+      const totalCommission = [...level1Referrals, ...level2Referrals]
+        .reduce((sum, ref) => sum + ref.total_commission, 0);
 
-      console.log('=== RÉSUMÉ DES CALCULS ===');
-      console.log('Referrals:', {
-        total_filleuls: referrals.length,
-        filleuls_actifs: activeReferralsCount,
-        commission_totale: totalCommission,
-        details_niveau_1: referralsByLevel[1].map(ref => ({
-          nom: ref.referred.full_name,
-          total_investi: ref.total_investment,
-          commission: ref.total_commission,
-          statut: ref.is_active ? 'Actif' : 'Inactif',
-          dernier_investissement: ref.last_investment_date
-        })),
-        details_niveau_2: referralsByLevel[2].map(ref => ({
-          nom: ref.referred.full_name,
-          total_investi: ref.total_investment,
-          commission: ref.total_commission,
-          statut: ref.is_active ? 'Actif' : 'Inactif',
-          dernier_investissement: ref.last_investment_date
-        }))
-      });
+      const activeReferralsCount = [...level1Referrals, ...level2Referrals]
+        .filter(ref => ref.is_active).length;
 
       set({
-        referrals,
+        referrals: [...level1Referrals, ...level2Referrals],
         referralsByLevel,
         totalCommission,
         activeReferrals: activeReferralsCount,
@@ -190,16 +178,26 @@ export const useReferralStore = create<ReferralState>((set) => ({
       });
 
       console.log('État final du store:', {
-        referrals,
-        referralsByLevel,
-        totalCommission,
-        activeReferrals: activeReferralsCount,
+        niveau1: {
+          total: level1Referrals.length,
+          actifs: level1Referrals.filter(r => r.is_active).length
+        },
+        niveau2: {
+          total: level2Referrals.length,
+          actifs: level2Referrals.filter(r => r.is_active).length
+        }
       });
 
     } catch (error) {
       console.error('Erreur lors du chargement des filleuls:', error);
       set({ referrals: [], totalCommission: 0, activeReferrals: 0, loading: false });
     }
+  },
+
+  getReferralLink: () => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile?.referral_code) return '';
+    return `${window.location.origin}/register?ref=${profile.referral_code}`;
   },
 
   debugReferralInvestments: async () => {
@@ -231,11 +229,5 @@ export const useReferralStore = create<ReferralState>((set) => ({
     } catch (error) {
       console.error('Erreur de débogage:', error);
     }
-  },
-
-  getReferralLink: () => {
-    const profile = useAuthStore.getState().profile;
-    if (!profile?.referral_code) return '';
-    return `${window.location.origin}/register?ref=${profile.referral_code}`;
   }
 }));
