@@ -6,9 +6,27 @@ import QRCode from 'qrcode.react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../utils/supabaseClient';
 
+interface Referral {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  level: number;
+  is_active: boolean;
+  total_investment: number;
+  total_commission: number;
+  last_investment_date: string | null;
+  created_at: string;
+  updated_at: string;
+  referred: {
+    full_name: string;
+    email: string;
+  };
+}
+
 const ReferralDashboard = () => {
   const {
     referrals,
+    referralsByLevel,
     loading,
     totalCommission,
     activeReferrals,
@@ -25,6 +43,7 @@ const ReferralDashboard = () => {
         await loadReferrals();
         console.log('Données de parrainage:', {
           referrals,
+          referralsByLevel,
           totalCommission,
           activeReferrals,
           loading
@@ -69,43 +88,30 @@ const ReferralDashboard = () => {
     }
   };
 
-  const calculateLevelStats = (level: number) => {
-    const levelReferrals = referrals.filter(r => r.level === level);
-    const activeReferrals = levelReferrals.filter(r => r.status === 'active');
+  const calculateLevelStats = (levelReferrals: Referral[]) => {
+    const activeReferrals = levelReferrals.filter(r => r.is_active);
     
-    console.log(`Statistiques niveau ${level}:`, {
-      total: levelReferrals.length,
-      actifs: activeReferrals.length,
-      referrals: levelReferrals,
-      commissions: levelReferrals.map(r => ({
-        nom: r.referred.full_name,
-        commission: r.total_commission,
-        statut: r.status
-      }))
-    });
-
     return {
-      count: activeReferrals.length,
+      count: levelReferrals.length,
+      activeCount: activeReferrals.length,
       commission: levelReferrals.reduce((sum, r) => sum + (r.total_commission || 0), 0),
       totalInvestment: levelReferrals.reduce((sum, r) => sum + (r.total_investment || 0), 0)
     };
   };
 
-  const level1Stats = calculateLevelStats(1);
-  const level2Stats = calculateLevelStats(2);
-  const level3Stats = calculateLevelStats(3);
+  const level1Stats = calculateLevelStats(referralsByLevel[1] || []);
+  const level2Stats = calculateLevelStats(referralsByLevel[2] || []);
 
   console.log('Statistiques globales:', {
     niveau1: level1Stats,
     niveau2: level2Stats,
-    niveau3: level3Stats,
     totalCommission,
     activeReferrals
   });
 
   const filteredReferrals = selectedLevel === 'all' 
     ? referrals 
-    : referrals.filter(r => r.level === parseInt(selectedLevel));
+    : (referralsByLevel[parseInt(selectedLevel) as 1 | 2] || []);
 
   const renderReferrals = () => {
     if (loading) {
@@ -144,7 +150,7 @@ const ReferralDashboard = () => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {filteredReferrals.map((referral, index) => {
+          {filteredReferrals.map((referral: Referral, index: number) => {
             const commissionRate = referral.level === 1 ? '5%' : referral.level === 2 ? '2%' : '1%';
             return (
               <tr key={referral.id || index}>
@@ -169,22 +175,20 @@ const ReferralDashboard = () => {
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <div className={`w-2 h-2 rounded-full mr-2 ${
-                        referral.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                        referral.is_active ? 'bg-green-500' : 'bg-red-500'
                       }`} />
                       <span className={`font-medium ${
-                        referral.status === 'active' ? 'text-green-700' : 'text-red-700'
+                        referral.is_active ? 'text-green-700' : 'text-red-700'
                       }`}>
-                        {referral.status === 'active' ? 'Actif' : 'Inactif'}
+                        {referral.is_active ? 'Actif' : 'Inactif'}
                       </span>
                     </div>
-                    {referral.referred_investments && referral.referred_investments.length > 0 && (
+                    {referral.total_investment > 0 && (
                       <div className="text-sm text-gray-600">
-                        <div className="font-medium">Investissements actifs:</div>
-                        {referral.referred_investments.map((inv, i) => (
-                          <div key={i} className="ml-2 text-xs">
-                            {(inv.amount || 0).toLocaleString('fr-FR')} FCFA
-                          </div>
-                        ))}
+                        <div className="font-medium">Investissement total:</div>
+                        <div className="ml-2 text-xs">
+                          {referral.total_investment.toLocaleString('fr-FR')} FCFA
+                        </div>
                       </div>
                     )}
                   </div>
@@ -330,18 +334,17 @@ const ReferralDashboard = () => {
               <option value="all">Tous les niveaux</option>
               <option value="1">Niveau 1</option>
               <option value="2">Niveau 2</option>
-              <option value="3">Niveau 3</option>
             </select>
           </div>
 
           {/* Résumé des statistiques */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-blue-50 p-3 rounded-lg">
               <div className="text-sm text-blue-600 font-medium">Niveau 1 (5%)</div>
               <div className="mt-1 space-y-2">
                 <div>
-                  <div className="text-xs text-gray-500">Filleuls actifs</div>
-                  <div className="text-lg font-semibold text-blue-700">{level1Stats.count}</div>
+                  <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
+                  <div className="text-lg font-semibold text-blue-700">{level1Stats.count} ({level1Stats.activeCount})</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Total investi</div>
@@ -361,8 +364,8 @@ const ReferralDashboard = () => {
               <div className="text-sm text-green-600 font-medium">Niveau 2 (2%)</div>
               <div className="mt-1 space-y-2">
                 <div>
-                  <div className="text-xs text-gray-500">Filleuls actifs</div>
-                  <div className="text-lg font-semibold text-green-700">{level2Stats.count}</div>
+                  <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
+                  <div className="text-lg font-semibold text-green-700">{level2Stats.count} ({level2Stats.activeCount})</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Total investi</div>
@@ -374,27 +377,6 @@ const ReferralDashboard = () => {
                   <div className="text-xs text-gray-500">Commission</div>
                   <div className="text-sm font-medium text-green-600">
                     {(level2Stats.commission || 0).toLocaleString('fr-FR')} FCFA
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <div className="text-sm text-purple-600 font-medium">Niveau 3 (1%)</div>
-              <div className="mt-1 space-y-2">
-                <div>
-                  <div className="text-xs text-gray-500">Filleuls actifs</div>
-                  <div className="text-lg font-semibold text-purple-700">{level3Stats.count}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Total investi</div>
-                  <div className="text-sm font-medium text-purple-600">
-                    {(level3Stats.totalInvestment || 0).toLocaleString('fr-FR')} FCFA
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Commission</div>
-                  <div className="text-sm font-medium text-purple-600">
-                    {(level3Stats.commission || 0).toLocaleString('fr-FR')} FCFA
                   </div>
                 </div>
               </div>
@@ -417,11 +399,6 @@ const ReferralDashboard = () => {
                     style={{ width: `${(level2Stats.commission / totalCommission) * 100}%` }}
                     title={`Niveau 2: ${level2Stats.commission.toLocaleString('fr-FR')} FCFA`}
                   />
-                  <div 
-                    className="bg-purple-500" 
-                    style={{ width: `${(level3Stats.commission / totalCommission) * 100}%` }}
-                    title={`Niveau 3: ${level3Stats.commission.toLocaleString('fr-FR')} FCFA`}
-                  />
                 </div>
               </div>
             )}
@@ -429,7 +406,6 @@ const ReferralDashboard = () => {
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Niveau 1: {(((level1Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
                 <span>Niveau 2: {(((level2Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
-                <span>Niveau 3: {(((level3Stats.commission || 0) / totalCommission) * 100).toFixed(1)}%</span>
               </div>
             ) : (
               <div className="text-xs text-gray-500 mt-1 text-center">
