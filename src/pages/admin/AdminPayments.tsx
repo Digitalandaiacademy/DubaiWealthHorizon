@@ -49,6 +49,8 @@ interface PaymentVerification {
   };
 }
 
+type PaymentVerificationResponse = PaymentVerification;
+
 const AdminPayments = () => {
   const navigate = useNavigate();
   const { profile } = useAuthStore();
@@ -307,10 +309,11 @@ const AdminPayments = () => {
           user_id: payment.user_id,
           title: 'ID de Transaction Disponible',
           message: `L'ID de transaction pour votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA est maintenant disponible.\n\n` +
-            `📋 ID de transaction : ${transactionId}\n` +
+            `📋 ID de transaction : ${transactionId} (Cliquez pour copier)\n` +
             `💰 Montant : ${payment.amount.toLocaleString('fr-FR')} FCFA\n` +
             `📈 Plan : ${payment.investment_plans.name}\n\n` +
-            `Pour valider votre investissement, veuillez vous rendre dans la section "Vérification de paiement" et entrer cet ID de transaction.`,
+            `Pour valider votre investissement, veuillez vous rendre dans la section "Vérification de paiement" et entrer cet ID de transaction.\n\n` +
+            `Astuce : Cliquez sur l'ID de transaction ci-dessus pour le copier automatiquement.`,
           type: 'info'
         });
 

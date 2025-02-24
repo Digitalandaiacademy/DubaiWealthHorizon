@@ -1,8 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { Bell, X, Check } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Bell, X, Check, Copy } from 'lucide-react';
 import { useNotificationStore } from '../store/notificationStore';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+  transaction_id?: string; // Ensure this property is defined
+}
 
 const NotificationDropdown = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const {
     notifications,
@@ -16,7 +29,33 @@ const NotificationDropdown = () => {
 
   useEffect(() => {
     loadNotifications();
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isOpen && !target.closest('.notification-dropdown')) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleCopyTransactionId = useCallback((transactionId: string | undefined, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (transactionId) {
+      navigator.clipboard.writeText(transactionId);
+      toast.success("ID de transaction copié !");
+    }
   }, []);
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    if (notification.transaction_id) {
+      navigate('/dashboard/payment-verification');
+    }
+  }, [navigate]);
 
   const getTypeStyles = (type: string) => {
     switch (type) {
@@ -46,7 +85,7 @@ const NotificationDropdown = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50 notification-dropdown">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -76,15 +115,25 @@ const NotificationDropdown = () => {
                   <div
                     key={notification.id}
                     className={`p-4 ${!notification.read ? 'bg-gray-50' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className={`text-sm font-medium ${getTypeStyles(notification.type)}`}>
                           {notification.title}
                         </p>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {notification.message}
-                        </p>
+                        <div className="mt-1 text-sm text-gray-600 flex items-center">
+                          <p className="whitespace-pre-line">{notification.message}</p>
+                          {notification.transaction_id && (
+                            <button
+                              onClick={(e) => handleCopyTransactionId(notification.transaction_id, e)}
+                              className="ml-2 text-blue-600 hover:text-blue-700 inline-flex items-center"
+                            >
+                              <Copy className="h-4 w-4 mr-1" />
+                              Copier
+                            </button>
+                          )}
+                        </div>
                         <p className="mt-1 text-xs text-gray-500">
                           {new Date(notification.created_at).toLocaleDateString('fr-FR')}
                         </p>
