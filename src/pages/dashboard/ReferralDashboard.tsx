@@ -255,14 +255,30 @@ const ReferralDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Parrainage</h1>
-        <Link 
-          to="/referral" 
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Voir le Programme
-        </Link>
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Parrainage</h1>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Commission disponible:</span>
+              <span className="text-lg font-bold text-green-600">{availableCommission.toLocaleString('fr-FR')} FCFA</span>
+              {availableCommission > 0 && (
+                <Link 
+                  to="/dashboard/withdrawals?type=commission"
+                  className="text-sm text-green-700 hover:text-green-800 underline"
+                >
+                  Retirer
+                </Link>
+              )}
+            </div>
+          </div>
+          <Link 
+            to="/referral" 
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Voir le Programme
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -319,7 +335,18 @@ const ReferralDashboard = () => {
             <div className="ml-4">
               <h3 className="text-sm font-medium text-gray-600">Niveau</h3>
               <p className="text-2xl font-bold text-purple-600">
-                {safeActiveReferrals >= 10 ? 'Expert' : safeActiveReferrals >= 5 ? 'Avancé' : 'Débutant'}
+                {safeActiveReferrals >= 50 ? 'Élite' :
+                 safeActiveReferrals >= 25 ? 'Expert' :
+                 safeActiveReferrals >= 15 ? 'Professionnel' :
+                 safeActiveReferrals >= 5 ? 'Intermédiaire' : 
+                 'Débutant'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {safeActiveReferrals >= 50 ? '50+ filleuls actifs' :
+                 safeActiveReferrals >= 25 ? '25+ filleuls actifs' :
+                 safeActiveReferrals >= 15 ? '15+ filleuls actifs' :
+                 safeActiveReferrals >= 5 ? '5+ filleuls actifs' :
+                 'Moins de 5 filleuls actifs'}
               </p>
             </div>
           </div>
@@ -328,9 +355,22 @@ const ReferralDashboard = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <AlertCircle className="h-8 w-8 text-orange-600" />
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Commission Niveau 1</h3>
-              <p className="text-2xl font-bold text-orange-600">5%</p>
+            <div className="ml-4 space-y-2">
+              <h3 className="text-sm font-medium text-gray-600">Commissions par Niveau</h3>
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <span className="text-sm font-semibold text-orange-600">Niveau 1:</span>
+                  <span className="ml-2 text-lg font-bold text-orange-600">5%</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-sm font-semibold text-green-600">Niveau 2:</span>
+                  <span className="ml-2 text-lg font-bold text-green-600">2%</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-sm font-semibold text-blue-600">Niveau 3:</span>
+                  <span className="ml-2 text-lg font-bold text-blue-600">1%</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
