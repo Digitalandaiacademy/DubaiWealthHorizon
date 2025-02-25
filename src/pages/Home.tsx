@@ -173,6 +173,48 @@ const Home = () => {
         'Service suprême',
         'Privilèges exclusifs'
       ]
+    },
+    {
+      title: 'Plan Titan',
+      price: '1,000,000',
+      color: 'from-teal-500 to-teal-700',
+      textColor: 'text-teal-600',
+      borderColor: 'border-teal-200',
+      rendement: '6.5%',
+      features: [
+        'Rendement quotidien de 6.5%',
+        'Retrait minimum: 200,000 FCFA',
+        'Service ultra-élite',
+        'Accès VIP aux événements'
+      ]
+    },
+    {
+      title: 'Plan Ultime',
+      price: '5,000,000',
+      color: 'from-cyan-500 to-cyan-700',
+      textColor: 'text-cyan-600',
+      borderColor: 'border-cyan-200',
+      rendement: '7%',
+      features: [
+        'Rendement quotidien de 7%',
+        'Retrait minimum: 1,000,000 FCFA',
+        'Support personnel 24/7',
+        'Partenariats exclusifs'
+      ]
+    },
+    {
+      title: 'Plan Suprême Élité',
+      price: '10,000,000',
+      color: 'from-green-500 to-green-700',
+      textColor: 'text-green-600',
+      borderColor: 'border-green-200',
+      rendement: '7.5%',
+      features: [
+        'Rendement quotidien de 7.5%',
+        'Retrait minimum: 2,000,000 FCFA',
+        'Gestionnaire de compte dédié',
+        'Avantages et privilèges uniques'
+      ]
     }
   ];
 
