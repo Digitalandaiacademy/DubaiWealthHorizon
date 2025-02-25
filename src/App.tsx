@@ -40,6 +40,7 @@ import Lexique from './pages/legal/Lexique';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import UserActivity from './pages/admin/UserActivity';
 import UserTracking from './pages/admin/UserTracking';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const { initialize, profile } = useAuthStore();
@@ -60,6 +61,7 @@ function App() {
           <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
           <Route path="/login" element={<PublicLayout showTelegram={false}><Login /></PublicLayout>} />
           <Route path="/register" element={<PublicLayout showTelegram={false}><Register /></PublicLayout>} />
+          <Route path="/reset-password" element={<PublicLayout showTelegram={false}><ResetPassword /></PublicLayout>} />
           <Route path="/investment" element={<PublicLayout><Investment /></PublicLayout>} />
           <Route path="/testimonials" element={<PublicLayout><Testimonials /></PublicLayout>} />
           <Route path="/community" element={<PublicLayout><Community /></PublicLayout>} />

@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { User, Phone, Mail, Key, Copy } from 'lucide-react';
+import { useInvestmentStore } from '../../store/investmentStore';
+import { useTransactionStore } from '../../store/transactionStore';
+import { User, Phone, Mail, Key, Copy, Shield, Clock, Wallet, TrendingUp, AlertCircle, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Card } from '../../components/ui/card';
 
 const Profile = () => {
-  const { profile, loading } = useAuthStore();
+  const { profile, loading: profileLoading } = useAuthStore();
+  const { userInvestments, loadUserInvestments } = useInvestmentStore();
+  const { transactions, totalReceived, totalWithdrawn, loadTransactions } = useTransactionStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [formData, setFormData] = useState({
     fullName: profile?.full_name || '',
     phoneNumber: profile?.phone_number || '',
-    email: profile?.email || ''
+    email: profile?.email || '',
+    notifications: {
+      email: true,
+      push: true,
+      investment: true,
+      security: true
+    }
   });
+
+  useEffect(() => {
+    loadUserInvestments();
+    loadTransactions();
+  }, []);
 
   const copyReferralCode = () => {
     if (profile?.referral_code) {
@@ -26,7 +43,15 @@ const Profile = () => {
     toast.success('Profil mis à jour avec succès');
   };
 
-  if (loading) {
+  const getAccountStats = () => {
+    const activeInvestments = userInvestments.filter(inv => inv.status === 'active').length;
+    const totalInvested = userInvestments.reduce((sum, inv) => sum + inv.amount, 0);
+    const lastActivity = transactions[0]?.created_at ? new Date(transactions[0].created_at).toLocaleDateString() : 'Aucune';
+    
+    return { activeInvestments, totalInvested, lastActivity };
+  };
+
+  if (profileLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
@@ -34,10 +59,16 @@ const Profile = () => {
     );
   }
 
+  const stats = getAccountStats();
+
   return (
     <div className="space-y-8">
+      {/* En-tête du profil */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Mon Profil</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Mon Profil</h1>
+          <p className="text-gray-500">Gérez vos informations personnelles et vos préférences</p>
+        </div>
         <button
           onClick={() => setIsEditing(!isEditing)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -46,8 +77,53 @@ const Profile = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Statistiques du compte */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="p-6 bg-gradient-to-br from-blue-50 to-white">
+          <div className="flex items-center space-x-4">
+            <Wallet className="h-8 w-8 text-blue-600" />
+            <div>
+              <p className="text-sm text-gray-500">Total Investi</p>
+              <p className="text-xl font-bold">{stats.totalInvested.toLocaleString('fr-FR')} FCFA</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-gradient-to-br from-green-50 to-white">
+          <div className="flex items-center space-x-4">
+            <TrendingUp className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="text-sm text-gray-500">Gains Totaux</p>
+              <p className="text-xl font-bold">{totalReceived.toLocaleString('fr-FR')} FCFA</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-gradient-to-br from-purple-50 to-white">
+          <div className="flex items-center space-x-4">
+            <Clock className="h-8 w-8 text-purple-600" />
+            <div>
+              <p className="text-sm text-gray-500">Investissements Actifs</p>
+              <p className="text-xl font-bold">{stats.activeInvestments}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 bg-gradient-to-br from-orange-50 to-white">
+          <div className="flex items-center space-x-4">
+            <AlertCircle className="h-8 w-8 text-orange-600" />
+            <div>
+              <p className="text-sm text-gray-500">Dernière Activité</p>
+              <p className="text-xl font-bold">{stats.lastActivity}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Informations personnelles */}
+      <Card className="overflow-hidden">
         <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations Personnelles</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -128,27 +204,133 @@ const Profile = () => {
             )}
           </form>
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Sécurité */}
+      <Card className="overflow-hidden">
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sécurité</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Sécurité</h2>
+            <Shield className="h-6 w-6 text-blue-600" />
+          </div>
           <div className="space-y-4">
-            <button
-              type="button"
-              className="w-full md:w-auto text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Changer le mot de passe
-            </button>
-            <button
-              type="button"
-              className="w-full md:w-auto text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Activer l&apos;authentification à deux facteurs
-            </button>
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <h3 className="font-medium text-gray-900">Authentification à deux facteurs</h3>
+                <p className="text-sm text-gray-500">Ajoutez une couche de sécurité supplémentaire à votre compte</p>
+              </div>
+              <button
+                onClick={() => setShowSecurityModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Configurer
+              </button>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <h3 className="font-medium text-gray-900">Mot de passe</h3>
+                <p className="text-sm text-gray-500">Dernière modification il y a 3 mois</p>
+              </div>
+              <button
+                onClick={() => {
+                  const newPassword = window.prompt('Entrez votre nouveau mot de passe (minimum 8 caractères):');
+                  if (newPassword) {
+                    if (newPassword.length < 8) {
+                      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+                      return;
+                    }
+                    try {
+                      useAuthStore.getState().updatePassword(newPassword);
+                      toast.success('Mot de passe mis à jour avec succès');
+                    } catch (error: any) {
+                      toast.error(error.message || 'Erreur lors de la mise à jour du mot de passe');
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Modifier
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Card>
+
+      {/* Préférences de notification */}
+      <Card className="overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Préférences de notification</h2>
+            <Bell className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="space-y-4">
+            {Object.entries(formData.notifications).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h3 className="font-medium text-gray-900">
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {`Notifications ${key === 'email' ? 'par email' : key === 'push' ? 'push' : 
+                      key === 'investment' ? 'sur les investissements' : 'de sécurité'}`}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={value}
+                    onChange={() => setFormData(prev => ({
+                      ...prev,
+                      notifications: {
+                        ...prev.notifications,
+                        [key]: !value
+                      }
+                    }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Activité récente */}
+      <Card className="overflow-hidden">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Activité récente</h2>
+          <div className="space-y-4">
+            {transactions.slice(0, 5).map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h3 className="font-medium text-gray-900">
+                    {transaction.type === 'investment' ? 'Investissement' :
+                     transaction.type === 'return' ? 'Retour sur investissement' :
+                     transaction.type === 'withdrawal' ? 'Retrait' :
+                     transaction.type === 'referral' ? 'Commission de parrainage' : 'Transaction'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {new Date(transaction.created_at).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <span className={`font-semibold ${
+                  transaction.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  {transaction.type === 'withdrawal' ? '-' : '+'}
+                  {transaction.amount.toLocaleString('fr-FR')} FCFA
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
     </div>
   );
 };
