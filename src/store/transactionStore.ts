@@ -10,7 +10,7 @@ interface WithdrawalInfo {
 interface Transaction {
   id: string;
   user_id: string;
-  type: 'investment' | 'return' | 'withdrawal' | 'referral';
+  type: 'investment' | 'return' | 'withdrawal' | 'referral' | 'commission_withdrawal';
   amount: number;
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
@@ -23,7 +23,13 @@ interface TransactionState {
   totalWithdrawn: number;
   availableBalance: number;
   loadTransactions: () => Promise<void>;
-  createWithdrawal: ({ amount, paymentMethod, paymentDetails, paymentCategory }: { amount: number | string, paymentMethod: string, paymentDetails: any, paymentCategory: string }) => Promise<any>;
+  createWithdrawal: ({ amount, paymentMethod, paymentDetails, paymentCategory, type }: { 
+    amount: number | string, 
+    paymentMethod: string, 
+    paymentDetails: any, 
+    paymentCategory: string,
+    type?: 'withdrawal' | 'commission_withdrawal' 
+  }) => Promise<any>;
   startAutoUpdate: () => void;
   stopAutoUpdate: () => void;
   loadUserDetails: (userId: string) => Promise<{
@@ -119,7 +125,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
       }
     },
 
-    createWithdrawal: async ({ amount, paymentMethod, paymentDetails, paymentCategory }) => {
+    createWithdrawal: async ({ amount, paymentMethod, paymentDetails, paymentCategory, type = 'withdrawal' }) => {
       try {
         const { data: userData } = await supabase.auth.getUser();
         
@@ -134,7 +140,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
           .from('transactions')
           .insert({
             user_id: userData.user.id,
-            type: 'withdrawal',
+            type,
             amount: withdrawalAmount,
             status: 'pending',
             payment_method: paymentMethod,

@@ -38,7 +38,7 @@ const AdminWithdrawals = () => {
       await loadTransactions();
       const withdrawalTransactions = await Promise.all(
         transactions
-          .filter(t => t.type === 'withdrawal')
+          .filter(t => t.type === 'withdrawal' || t.type === 'commission_withdrawal')
           .map(async (transaction) => {
             const userDetails = await loadUserDetails(transaction.user_id);
             return {
@@ -97,9 +97,12 @@ const AdminWithdrawals = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Montant
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Méthode
-                </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Méthode
+                  </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Détails
                 </th>
@@ -124,7 +127,14 @@ const AdminWithdrawals = () => {
                     {withdrawal.amount.toLocaleString()} FCFA
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {`Méthode: ${withdrawal.payment_details?.paymentMethod || withdrawal.payment_method || 'N/A'}`}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      withdrawal.type === 'commission_withdrawal' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {withdrawal.type === 'commission_withdrawal' ? 'Commission' : 'Standard'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {`${withdrawal.payment_details?.paymentMethod || withdrawal.payment_method || 'N/A'}`}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     <div>

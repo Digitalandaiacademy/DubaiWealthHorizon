@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTransactionStore } from '../../store/transactionStore';
 import { useAuthStore } from '../../store/authStore';
 import { useInvestmentStore } from '../../store/investmentStore';
+import { useReferralStore } from '../../store/referralStore';
+import { useSearchParams } from 'react-router-dom';
 import PaymentMethods from '../../components/PaymentMethods';
 import toast from 'react-hot-toast';
 
@@ -14,9 +17,13 @@ interface WithdrawalFormData {
 }
 
 const Withdrawals = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const withdrawalType = searchParams.get('type');
   const { profile } = useAuthStore();
   const { userInvestments, loadUserInvestments } = useInvestmentStore();
   const { transactions, loadTransactions, createWithdrawal } = useTransactionStore();
+  const { totalCommission, loadReferrals } = useReferralStore();
   const [amount, setAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [paymentCategory, setPaymentCategory] = useState<string>('');
@@ -29,8 +36,18 @@ const Withdrawals = () => {
 
   // Calculer le solde disponible et le total des retraits
   const calculateAmounts = () => {
+    if (withdrawalType === 'commission') {
+      const withdrawnCommissions = transactions
+        .filter(t => t.type === 'commission_withdrawal' && (t.status === 'completed' || t.status === 'pending'))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      return {
+        availableBalance: (totalCommission || 0) - withdrawnCommissions,
+        totalWithdrawn: withdrawnCommissions
+      };
+    }
+
     let totalEarnings = 0;
-    
     userInvestments.forEach(investment => {
       if (investment.status === 'active') {
         const startDate = new Date(investment.created_at);
@@ -65,7 +82,10 @@ const Withdrawals = () => {
   useEffect(() => {
     loadUserInvestments();
     loadTransactions();
-  }, []);
+    if (withdrawalType === 'commission') {
+      loadReferrals();
+    }
+  }, [withdrawalType]);
 
   const handlePaymentMethodSelect = (method: string, category: string) => {
     setPaymentMethod(method);
@@ -86,9 +106,16 @@ const Withdrawals = () => {
     const withdrawalAmount = Math.floor(amount);
     const { availableBalance } = calculateAmounts();
     
-    if (withdrawalAmount < 1000) {
-      toast.error('Le montant minimum de retrait est de 1,000 FCFA');
-      return;
+    if (withdrawalType === 'commission') {
+      if (withdrawalAmount < 500) {
+        toast.error('Le montant minimum de retrait des commissions est de 500 FCFA');
+        return;
+      }
+    } else {
+      if (withdrawalAmount < 1000) {
+        toast.error('Le montant minimum de retrait est de 1,000 FCFA');
+        return;
+      }
     }
 
     if (withdrawalAmount > availableBalance) {
@@ -117,6 +144,7 @@ const Withdrawals = () => {
         amount: withdrawalAmount,
         paymentMethod,
         paymentCategory,
+        type: withdrawalType === 'commission' ? 'commission_withdrawal' : 'withdrawal',
         paymentDetails: {
           ...formData
         }
@@ -125,6 +153,11 @@ const Withdrawals = () => {
       setShowForm(false);
       setAmount(0);
       setPaymentMethod('');
+      
+      // Rediriger vers le tableau de bord des parrainages si c'est un retrait de commission
+      if (withdrawalType === 'commission') {
+        navigate('/dashboard/referral?withdrawalSuccess=true');
+      }
     } catch (error) {
       toast.error('Une erreur est survenue lors de la demande de retrait');
     } finally {
@@ -137,7 +170,9 @@ const Withdrawals = () => {
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Retraits</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {withdrawalType === 'commission' ? 'Retrait des Commissions' : 'Retraits'}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-lg shadow">
             <p className="text-gray-600">Solde disponible</p>
@@ -151,6 +186,13 @@ const Withdrawals = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
+        {withdrawalType === 'commission' && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+            <p className="text-blue-700">
+              Vous pouvez retirer vos commissions de parrainage à partir de 500 FCFA.
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

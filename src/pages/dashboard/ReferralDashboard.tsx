@@ -1,10 +1,18 @@
 import React, { Fragment, useEffect, useState } from 'react';
 import { useReferralStore } from '../../store/referralStore';
+import { useTransactionStore } from '../../store/transactionStore';
 import { Users, Copy, TrendingUp, Award, Share2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode.react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../utils/supabaseClient';
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  status: string;
+}
 
 interface Referral {
   id: string;
@@ -34,27 +42,45 @@ const ReferralDashboard = () => {
     getReferralLink
   } = useReferralStore();
 
+  const { transactions, loadTransactions } = useTransactionStore();
+  const [availableCommission, setAvailableCommission] = useState(0);
+  const [withdrawnCommission, setWithdrawnCommission] = useState(0);
+
   const [showQR, setShowQR] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState('all');
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Vérifier si le retrait a été effectué
+    const withdrawalSuccess = searchParams.get('withdrawalSuccess');
+    if (withdrawalSuccess === 'true') {
+      toast.success('Votre demande de retrait de commission a été envoyée avec succès');
+    }
+
     const fetchReferrals = async () => {
       try {
         await loadReferrals();
-        console.log('Données de parrainage:', {
-          referrals,
-          referralsByLevel,
-          totalCommission,
-          activeReferrals,
-          loading
-        });
+        await loadTransactions();
       } catch (error) {
-        console.error('Erreur lors du chargement des filleuls:', error);
+        console.error('Erreur lors du chargement des données:', error);
       }
     };
 
     fetchReferrals();
   }, []);
+
+  // Calculer la commission disponible (total - retraits)
+  useEffect(() => {
+    const withdrawn = transactions
+      .filter((t: Transaction) => 
+        t.type === 'commission_withdrawal' && 
+        (t.status === 'completed' || t.status === 'pending')
+      )
+      .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+
+    setWithdrawnCommission(withdrawn);
+    setAvailableCommission(totalCommission - withdrawn);
+  }, [totalCommission, transactions]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -102,14 +128,6 @@ const ReferralDashboard = () => {
   const level1Stats = calculateLevelStats(referralsByLevel[1] || []);
   const level2Stats = calculateLevelStats(referralsByLevel[2] || []);
 
-  console.log('Statistiques globales:', {
-    niveau1: level1Stats,
-    niveau2: level2Stats,
-    totalCommission,
-    activeReferrals
-  });
-
-  // Fonction pour obtenir les filleuls selon le niveau sélectionné
   const getFilteredReferrals = () => {
     switch (selectedLevel) {
       case '1':
@@ -117,11 +135,9 @@ const ReferralDashboard = () => {
       case '2':
         return referralsByLevel[2];
       default:
-        // Pour 'all', afficher d'abord les filleuls de niveau 1, puis ceux de niveau 2
         return [
           ...referralsByLevel[1],
           ...referralsByLevel[2].filter(ref2 => 
-            // Exclure les filleuls de niveau 2 qui sont aussi des filleuls de niveau 1
             !referralsByLevel[1].some(ref1 => ref1.referred_id === ref2.referred_id)
           )
         ];
@@ -130,6 +146,8 @@ const ReferralDashboard = () => {
 
   const filteredReferrals = getFilteredReferrals();
   const totalReferrals = referralsByLevel[1].length + referralsByLevel[2].length;
+  const safeTotalCommission = totalCommission || 0;
+  const safeActiveReferrals = activeReferrals || 0;
 
   const renderReferrals = () => {
     if (loading) {
@@ -235,12 +253,8 @@ const ReferralDashboard = () => {
     );
   };
 
-  const safeActiveReferrals = activeReferrals || 0;
-  const safeTotalCommission = totalCommission || 0;
-
   return (
     <div className="space-y-8">
-      {/* En-tête */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Parrainage</h1>
         <Link 
@@ -251,7 +265,6 @@ const ReferralDashboard = () => {
         </Link>
       </div>
 
-      {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
@@ -266,11 +279,36 @@ const ReferralDashboard = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <TrendingUp className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-600">Commissions Totales</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {safeTotalCommission.toLocaleString('fr-FR')} FCFA
-              </p>
+            <div className="ml-4 space-y-2">
+              <h3 className="text-sm font-medium text-gray-600">Commissions</h3>
+              <div className="space-y-1">
+                <div>
+                  <span className="text-xs text-gray-500">Total gagné:</span>
+                  <p className="text-lg font-semibold text-gray-700">
+                    {safeTotalCommission.toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Total retiré:</span>
+                  <p className="text-sm text-gray-600">
+                    {withdrawnCommission.toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Disponible:</span>
+                  <p className="text-2xl font-bold text-green-600">
+                    {availableCommission.toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+                {availableCommission > 0 && (
+                  <Link 
+                    to="/dashboard/withdrawals?type=commission" 
+                    className="mt-2 inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-md hover:bg-green-200"
+                  >
+                    Retirer mes commissions
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -298,7 +336,6 @@ const ReferralDashboard = () => {
         </div>
       </div>
 
-      {/* Lien de parrainage */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Votre lien de parrainage</h2>
         <div className="flex flex-col md:flex-row gap-4">
@@ -339,7 +376,6 @@ const ReferralDashboard = () => {
         )}
       </div>
 
-      {/* Liste des filleuls */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-6 border-b">
           <div className="flex justify-between items-center mb-4">
@@ -355,7 +391,6 @@ const ReferralDashboard = () => {
             </select>
           </div>
 
-          {/* Résumé des statistiques */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-blue-50 p-3 rounded-lg">
               <div className="text-sm text-blue-600 font-medium">Niveau 1 (5%)</div>
@@ -401,7 +436,6 @@ const ReferralDashboard = () => {
             </div>
           </div>
 
-          {/* Barre de progression des commissions */}
           <div className="mt-4">
             <div className="text-sm font-medium text-gray-700 mb-2">Répartition des commissions</div>
             {(totalCommission || 0) > 0 && (

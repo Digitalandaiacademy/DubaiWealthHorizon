@@ -2,6 +2,16 @@ import React, { useEffect } from 'react';
 import { useTransactionStore } from '../../store/transactionStore';
 import { ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
 
+interface Transaction {
+  id: string;
+  user_id: string;
+  type: 'investment' | 'return' | 'withdrawal' | 'referral' | 'commission_withdrawal';
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  created_at: string;
+  description?: string;
+}
+
 const Transactions = () => {
   const {
     transactions,
@@ -59,7 +69,12 @@ const Transactions = () => {
       case 'withdrawal':
         return {
           icon: <ArrowUpCircle className="h-5 w-5 text-red-500" />,
-          text: 'Retrait'
+          text: 'Retrait standard'
+        };
+      case 'commission_withdrawal':
+        return {
+          icon: <ArrowUpCircle className="h-5 w-5 text-purple-500" />,
+          text: 'Retrait de commission'
         };
       case 'referral':
         return {
@@ -134,9 +149,6 @@ const Transactions = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Statut
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -161,9 +173,9 @@ const Transactions = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`text-sm font-medium ${
-                            transaction.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'
+                            transaction.type === 'withdrawal' || transaction.type === 'commission_withdrawal' ? 'text-red-600' : 'text-green-600'
                           }`}>
-                            {transaction.type === 'withdrawal' ? '-' : '+'}
+                            {transaction.type === 'withdrawal' || transaction.type === 'commission_withdrawal' ? '-' : '+'}
                             {transaction.amount.toLocaleString('fr-FR')} FCFA
                           </span>
                         </td>
@@ -174,9 +186,6 @@ const Transactions = () => {
                             {transaction.status === 'completed' ? 'Complété' :
                              transaction.status === 'pending' ? 'En attente' : 'Échoué'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.description}
                         </td>
                       </tr>
                     );
