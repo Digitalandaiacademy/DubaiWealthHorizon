@@ -12,8 +12,22 @@ interface Transaction {
   user_id: string;
   type: 'investment' | 'return' | 'withdrawal' | 'referral' | 'commission_withdrawal';
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'rejected';
   created_at: string;
+  payment_method?: string;
+  payment_details?: {
+    fullName: string;
+    phoneNumber?: string;
+    email: string;
+    cryptoAddress?: string;
+    paymentMethod?: string;
+    paymentCategory?: string;
+  };
+  user?: {
+    full_name: string;
+    email: string;
+    created_at: string;
+  } | null;
 }
 
 interface TransactionState {
@@ -22,6 +36,7 @@ interface TransactionState {
   totalReceived: number;
   totalWithdrawn: number;
   availableBalance: number;
+  setLoading: (loading: boolean) => void;
   loadTransactions: () => Promise<void>;
   createWithdrawal: ({ amount, paymentMethod, paymentDetails, paymentCategory, type }: { 
     amount: number | string, 
@@ -79,13 +94,21 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
     totalReceived: 0,
     totalWithdrawn: 0,
     availableBalance: 0,
+    setLoading: (loading: boolean) => set({ loading }),
 
     loadTransactions: async () => {
       try {
         set({ loading: true });
         const { data, error } = await supabase
           .from('transactions')
-          .select('*')
+          .select(`
+            *,
+            user:profiles(
+              full_name,
+              email,
+              created_at
+            )
+          `)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -95,22 +118,33 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
         // Calculer les rendements avec le bon taux
         const returns = await calculateReturns();
 
-        // Calculer le total des retraits (complétés + en attente)
-        const completedWithdrawals = transactions
+        // Calculer les totaux par type de retrait
+        const standardWithdrawals = transactions
           .filter(t => t.type === 'withdrawal' && t.status === 'completed')
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        const commissionWithdrawals = transactions
+          .filter(t => t.type === 'commission_withdrawal' && t.status === 'completed')
           .reduce((sum, t) => sum + t.amount, 0);
 
         const pendingWithdrawals = transactions
           .filter(t => t.type === 'withdrawal' && t.status === 'pending')
           .reduce((sum, t) => sum + t.amount, 0);
 
-        const totalWithdrawn = completedWithdrawals;
-        const availableBalance = Math.floor(returns - completedWithdrawals - pendingWithdrawals);
+        const pendingCommissionWithdrawals = transactions
+          .filter(t => t.type === 'commission_withdrawal' && t.status === 'pending')
+          .reduce((sum, t) => sum + t.amount, 0);
+
+        const totalWithdrawn = standardWithdrawals + commissionWithdrawals;
+        const availableBalance = Math.floor(returns - standardWithdrawals - pendingWithdrawals);
 
         console.log('Debug - Store loadTransactions:', {
           returns,
-          completedWithdrawals,
+          standardWithdrawals,
+          commissionWithdrawals,
           pendingWithdrawals,
+          pendingCommissionWithdrawals,
+          totalWithdrawn,
           availableBalance
         });
 
@@ -200,6 +234,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
 
     updateWithdrawalStatus: async (withdrawalId: string, status: 'completed' | 'rejected') => {
       try {
+        set({ loading: true });
         const { data: userData } = await supabase.auth.getUser();
         
         if (!userData.user) {
@@ -210,19 +245,54 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
           .from('transactions')
           .update({ status })
           .eq('id', withdrawalId)
-          .select();
+          .select(`
+            *,
+            user:profiles(
+              full_name,
+              email,
+              created_at
+            )
+          `);
 
         if (error) {
           console.error('Erreur lors de la mise à jour du retrait:', error);
           throw error;
         }
 
-        // Recharger les transactions après la mise à jour
-        await get().loadTransactions();
+        // Mise à jour locale du state
+        set(state => {
+          const updatedTransactions = state.transactions.map(t =>
+            t.id === withdrawalId ? { ...t, status } : t
+          );
+
+          // Recalculer les totaux
+          const standardWithdrawals = updatedTransactions
+            .filter(t => t.type === 'withdrawal' && t.status === 'completed')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const commissionWithdrawals = updatedTransactions
+            .filter(t => t.type === 'commission_withdrawal' && t.status === 'completed')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const pendingWithdrawals = updatedTransactions
+            .filter(t => t.type === 'withdrawal' && t.status === 'pending')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const totalWithdrawn = standardWithdrawals + commissionWithdrawals;
+          const availableBalance = Math.floor(state.totalReceived - standardWithdrawals - pendingWithdrawals);
+
+          return {
+            transactions: updatedTransactions,
+            totalWithdrawn,
+            availableBalance,
+            loading: false
+          };
+        });
 
         return data;
       } catch (error) {
         console.error('Erreur lors de la mise à jour du retrait:', error);
+        set({ loading: false });
         throw error;
       }
     },

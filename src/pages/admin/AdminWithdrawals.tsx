@@ -9,9 +9,9 @@ import { ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
 interface Transaction {
   id: string;
   user_id: string;
-  type: string;
+  type: 'investment' | 'return' | 'withdrawal' | 'referral' | 'commission_withdrawal';
   amount: number;
-  status: string;
+  status: 'pending' | 'completed' | 'failed' | 'rejected';
   created_at: string;
   payment_method?: string;
   payment_details?: {
@@ -22,7 +22,7 @@ interface Transaction {
     paymentMethod?: string;
     paymentCategory?: string;
   };
-  user: {
+  user?: {
     full_name: string;
     email: string;
     created_at: string;
@@ -41,9 +41,7 @@ interface GroupedWithdrawals {
 }
 
 const AdminWithdrawals = () => {
-  const { transactions, loadTransactions, loadUserDetails } = useTransactionStore();
-  const [loading, setLoading] = useState(false);
-  const [withdrawals, setWithdrawals] = useState<Transaction[]>([]);
+  const { transactions, loadTransactions, loading } = useTransactionStore();
   const [groupedWithdrawals, setGroupedWithdrawals] = useState<GroupedWithdrawals>({});
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,27 +50,17 @@ const AdminWithdrawals = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true);
-      await loadTransactions();
-      const withdrawalTransactions = await Promise.all(
-        transactions
-          .filter(t => t.type === 'withdrawal' || t.type === 'commission_withdrawal')
-          .map(async (transaction) => {
-            const userDetails = await loadUserDetails(transaction.user_id);
-            return {
-              ...transaction,
-              user: userDetails
-            };
-          })
-      );
-      setWithdrawals(withdrawalTransactions);
-      groupWithdrawalsByUser(withdrawalTransactions);
-      setLoading(false);
-    };
+    loadTransactions();
+  }, []); // S'exécute une seule fois au montage
 
-    fetchTransactions();
-  }, [loadTransactions, transactions]);
+  useEffect(() => {
+    if (transactions.length > 0) {
+      const withdrawalTransactions = transactions.filter(
+        t => t.type === 'withdrawal' || t.type === 'commission_withdrawal'
+      );
+      groupWithdrawalsByUser(withdrawalTransactions);
+    }
+  }, [transactions]);
 
   const groupWithdrawalsByUser = (withdrawalsList: Transaction[]) => {
     const grouped = withdrawalsList.reduce((acc: GroupedWithdrawals, withdrawal) => {
@@ -104,14 +92,12 @@ const AdminWithdrawals = () => {
 
   const handleStatusChange = async (withdrawalId: string, status: 'completed' | 'rejected') => {
     try {
-      setLoading(true);
       await useTransactionStore.getState().updateWithdrawalStatus(withdrawalId, status);
+      await loadTransactions(); // Recharger toutes les transactions
       toast.success(`Retrait ${status === 'completed' ? 'validé' : 'rejeté'} avec succès`);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
       toast.error('Une erreur est survenue lors de la mise à jour du statut');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -175,12 +161,6 @@ const AdminWithdrawals = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gestion des Retraits</h2>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Rafraîchir
-        </button>
       </div>
 
       {/* Statistiques rapides */}

@@ -32,6 +32,12 @@ interface DashboardStats {
   monthlyData: any[];
 }
 
+interface InvestmentTotals {
+  pending: number;
+  verified: number;
+  rejected: number;
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuthStore();
@@ -44,7 +50,7 @@ const AdminDashboard = () => {
     dailyROI: 0,
     monthlyData: []
   });
-  const [investmentTotals, setInvestmentTotals] = useState({
+  const [investmentTotals, setInvestmentTotals] = useState<InvestmentTotals>({
     pending: 0,
     verified: 0,
     rejected: 0
@@ -62,11 +68,9 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
 
-      // Vérification de l'authentification
       const { data: { user } } = await supabase.auth.getUser();
       console.log('Utilisateur connecté:', user);
 
-      // Requête brute pour vérifier le contenu de la table
       const { data: rawInvestments, error: rawError } = await supabase
         .from('user_investments')
         .select('*');
@@ -77,9 +81,8 @@ const AdminDashboard = () => {
         count: rawInvestments?.length
       });
 
-      // Requêtes détaillées pour chaque statut
       const statuses = ['pending', 'active', 'rejected'];
-      const totalResults = {};
+      const totalResults: { [key: string]: number } = {};
 
       for (const status of statuses) {
         const { data, error, count } = await supabase
@@ -98,14 +101,12 @@ const AdminDashboard = () => {
 
       console.log('Totaux par statut:', totalResults);
 
-      // Mise à jour des totaux d'investissement
       setInvestmentTotals({
         pending: totalResults['pending'],
         verified: totalResults['active'],
         rejected: totalResults['rejected']
       });
 
-      // Statistiques utilisateurs et paiements
       const { count: totalUsers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -132,7 +133,7 @@ const AdminDashboard = () => {
         totalInvestments: Math.round(totalResults['pending'] + totalResults['active']),
         activeInvestments: activeInvestments || 0,
         pendingPayments: pendingPayments || 0,
-        dailyROI: 0, // À calculer si nécessaire
+        dailyROI: 0,
         monthlyData: []
       });
 
@@ -153,6 +154,8 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord Administrateur</h1>
+
       {/* Résumé des totaux d'investissements */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card>
@@ -186,8 +189,6 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord Administrateur</h1>
 
       {/* Cartes de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
