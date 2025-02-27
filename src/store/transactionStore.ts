@@ -36,6 +36,8 @@ interface TransactionState {
   totalReceived: number;
   totalWithdrawn: number;
   availableBalance: number;
+  newPendingWithdrawals: Transaction[];
+  lastCheckedTimestamp: string;
   setLoading: (loading: boolean) => void;
   loadTransactions: () => Promise<void>;
   createWithdrawal: ({ amount, paymentMethod, paymentDetails, paymentCategory, type }: { 
@@ -53,10 +55,12 @@ interface TransactionState {
     created_at: string;
   } | null>;
   updateWithdrawalStatus: (withdrawalId: string, status: 'completed' | 'rejected') => Promise<any>;
+  acknowledgeNewWithdrawals: () => void;
 }
 
 export const useTransactionStore = create<TransactionState>((set, get) => {
   let updateInterval: NodeJS.Timeout | null = null;
+  let lastChecked = new Date().toISOString();
 
   const calculateReturns = async () => {
     // Récupérer les investissements avec leurs plans
@@ -94,7 +98,15 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
     totalReceived: 0,
     totalWithdrawn: 0,
     availableBalance: 0,
+    newPendingWithdrawals: [],
+    lastCheckedTimestamp: lastChecked,
     setLoading: (loading: boolean) => set({ loading }),
+    acknowledgeNewWithdrawals: () => {
+      set({
+        lastCheckedTimestamp: new Date().toISOString(),
+        newPendingWithdrawals: []
+      });
+    },
 
     loadTransactions: async () => {
       try {
@@ -148,11 +160,19 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
           availableBalance
         });
 
+        // Détecter les nouvelles demandes de retrait
+        const newWithdrawals = transactions.filter(t => 
+          (t.type === 'withdrawal' || t.type === 'commission_withdrawal') &&
+          t.status === 'pending' &&
+          new Date(t.created_at) > new Date(get().lastCheckedTimestamp)
+        );
+
         set({
           transactions,
           totalReceived: returns,
           totalWithdrawn,
-          availableBalance
+          availableBalance,
+          newPendingWithdrawals: newWithdrawals
         });
       } finally {
         set({ loading: false });
@@ -285,7 +305,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
             transactions: updatedTransactions,
             totalWithdrawn,
             availableBalance,
-            loading: false
+            loading: false,
+            newPendingWithdrawals: state.newPendingWithdrawals.filter(w => w.id !== withdrawalId),
+            lastCheckedTimestamp: state.lastCheckedTimestamp
           };
         });
 

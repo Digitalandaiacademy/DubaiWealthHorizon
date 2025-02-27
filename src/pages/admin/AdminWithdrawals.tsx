@@ -41,7 +41,7 @@ interface GroupedWithdrawals {
 }
 
 const AdminWithdrawals = () => {
-  const { transactions, loadTransactions, loading } = useTransactionStore();
+  const { transactions, loadTransactions, loading, newPendingWithdrawals, acknowledgeNewWithdrawals } = useTransactionStore();
   const [groupedWithdrawals, setGroupedWithdrawals] = useState<GroupedWithdrawals>({});
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +51,10 @@ const AdminWithdrawals = () => {
 
   useEffect(() => {
     loadTransactions();
+    useTransactionStore.getState().startAutoUpdate();
+    return () => {
+      useTransactionStore.getState().stopAutoUpdate();
+    };
   }, []); // S'exécute une seule fois au montage
 
   useEffect(() => {
@@ -309,7 +313,19 @@ const AdminWithdrawals = () => {
                       {data.withdrawals
                         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                         .map((withdrawal) => (
-                          <tr key={withdrawal.id} className="hover:bg-gray-50">
+                          <tr 
+                            key={withdrawal.id} 
+                            className={`hover:bg-gray-50 ${
+                              newPendingWithdrawals.some(w => w.id === withdrawal.id)
+                                ? 'bg-yellow-50 animate-pulse'
+                                : ''
+                            }`}
+                            onClick={() => {
+                              if (newPendingWithdrawals.some(w => w.id === withdrawal.id)) {
+                                acknowledgeNewWithdrawals();
+                              }
+                            }}
+                          >
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {format(new Date(withdrawal.created_at), 'PPP HH:mm', { locale: fr })}
                             </td>
