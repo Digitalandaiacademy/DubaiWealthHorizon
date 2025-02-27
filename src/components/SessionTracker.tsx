@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface SessionTrackerProps {
-  onSessionUpdate?: (data: any) => void;
+  onSessionUpdate?: (data: any[]) => void;
 }
 
 const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
@@ -13,16 +13,63 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
 
         if (user) {
           const userAgent = window.navigator.userAgent;
-          const ipAddress = await getIpAddress();
-          
-          await supabase.from('profiles').update({
-            last_active: new Date().toISOString(),
-            browser_info: {
-              browser: getBrowserInfo(userAgent),
-              os: getOSInfo(userAgent)
-            },
-            ip_address: ipAddress
-          }).eq('id', user.id);
+          const deviceInfo = {
+            browser: getBrowserInfo(userAgent),
+            os: getOSInfo(userAgent),
+            device: getDeviceInfo(userAgent)
+          };
+
+          // Obtenir la localisation
+          const locationInfo = await getLocationInfo();
+
+          // Vérifier si une session existe déjà pour cet utilisateur
+          const { data: existingSessions } = await supabase
+            .from('user_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+          if (existingSessions) {
+            // Mettre à jour la session existante
+            await supabase
+              .from('user_sessions')
+              .update({
+                device_info: deviceInfo,
+                location: locationInfo,
+                is_online: true,
+                last_active: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+          } else {
+            // Créer une nouvelle session
+            await supabase
+              .from('user_sessions')
+              .insert({
+                user_id: user.id,
+                device_info: deviceInfo,
+                location: locationInfo,
+                is_online: true,
+                session_start: new Date().toISOString(),
+                last_active: new Date().toISOString()
+              });
+          }
+
+          // Charger et envoyer les données mises à jour
+          const { data: updatedSessions } = await supabase
+            .from('user_sessions')
+            .select(`
+              *,
+              profiles (
+                full_name,
+                email,
+                avatar_url
+              )
+            `)
+            .order('last_active', { ascending: false });
+
+          if (onSessionUpdate && updatedSessions) {
+            onSessionUpdate(updatedSessions);
+          }
         }
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la session:', error);
@@ -35,26 +82,53 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
 
     // Configuration du canal de suivi en temps réel
     const channel = supabase
-      .channel('profiles')
+      .channel('user_sessions')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'profiles'
+          table: 'user_sessions'
         },
-        (payload) => {
-          if (onSessionUpdate) {
-            onSessionUpdate(payload);
+        async () => {
+          // Recharger toutes les sessions lors d'un changement
+          const { data } = await supabase
+            .from('user_sessions')
+            .select(`
+              *,
+              profiles (
+                full_name,
+                email,
+                avatar_url
+              )
+            `)
+            .order('last_active', { ascending: false });
+
+          if (onSessionUpdate && data) {
+            onSessionUpdate(data);
           }
         }
       )
       .subscribe();
 
+    // Marquer l'utilisateur comme hors ligne lors de la fermeture de la page
+    const handleBeforeUnload = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('user_sessions')
+          .update({ is_online: false })
+          .eq('user_id', user.id);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // Nettoyage
     return () => {
       clearInterval(interval);
       supabase.removeChannel(channel);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [onSessionUpdate]);
 
@@ -90,14 +164,31 @@ const getOSInfo = (userAgent: string): string => {
   return 'Autre';
 };
 
-const getIpAddress = async (): Promise<string> => {
+const getDeviceInfo = (userAgent: string): string => {
+  if (userAgent.includes('Mobile')) {
+    return 'Mobile';
+  } else if (userAgent.includes('Tablet')) {
+    return 'Tablet';
+  }
+  return 'Desktop';
+};
+
+const getLocationInfo = async () => {
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
+    const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
-    return data.ip;
+    return {
+      country: data.country_name || 'Inconnu',
+      city: data.city || 'Inconnue',
+      region: data.region || 'Inconnue'
+    };
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'adresse IP:', error);
-    return 'Inconnue';
+    console.error('Erreur lors de la récupération de la localisation:', error);
+    return {
+      country: 'Inconnu',
+      city: 'Inconnue',
+      region: 'Inconnue'
+    };
   }
 };
 
