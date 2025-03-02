@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../utils/supabaseClient';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from 'react-hot-toast';
-import { useInvestmentStore } from '../../store/investmentStore';
+import { useInvestmentStore } from '../../store/investment';
 
 interface PaymentVerification {
   id: string;

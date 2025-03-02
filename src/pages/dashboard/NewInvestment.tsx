@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useInvestmentStore } from '../../store/investmentStore';
+import { useInvestmentStore } from '../../store/investment';
 import { useAuthStore } from '../../store/authStore';
 import { Phone, AlertCircle, Check, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { sendPaymentNotificationEmail } from '../../services/emailService';
 
 const NewInvestment = () => {
   const navigate = useNavigate();
@@ -126,6 +127,21 @@ const NewInvestment = () => {
         });
 
       if (verificationError) throw verificationError;
+
+      // Envoyer l'email de notification à l'administrateur
+      try {
+        await sendPaymentNotificationEmail({
+          userFullName: profile?.full_name || '',
+          userEmail: user?.email || '',
+          amount: amount,
+          paymentMethod: paymentMethod,
+          transactionId: generatedTransactionId,
+          planName: selectedPlan.name
+        });
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+        // Ne pas bloquer le processus si l'envoi d'email échoue
+      }
 
       // Mettre à jour le statut de paiement de l'utilisateur
       const { error: profileError } = await supabase
