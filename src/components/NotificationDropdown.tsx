@@ -11,7 +11,7 @@ interface Notification {
   type: string;
   read: boolean;
   created_at: string;
-  transaction_id?: string; // Ensure this property is defined
+  transaction_id?: string | undefined;
 }
 
 const NotificationDropdown = () => {
@@ -85,7 +85,7 @@ const NotificationDropdown = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50 notification-dropdown">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50 notification-dropdown transform -translate-x-1/2 left-1/2 md:transform-none md:left-auto">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -118,16 +118,16 @@ const NotificationDropdown = () => {
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className={`text-sm font-medium ${getTypeStyles(notification.type)}`}>
+                      <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent text overflow */}
+                        <p className={`text-sm font-medium ${getTypeStyles(notification.type)} break-words`}>
                           {notification.title}
                         </p>
-                        <div className="mt-1 text-sm text-gray-600 flex items-center">
-                          <p className="whitespace-pre-line">{notification.message}</p>
+                        <div className="mt-1 text-sm text-gray-600">
+                          <p className="whitespace-pre-line break-words">{notification.message}</p>
                           {notification.transaction_id && (
                             <button
                               onClick={(e) => handleCopyTransactionId(notification.transaction_id, e)}
-                              className="ml-2 text-blue-600 hover:text-blue-700 inline-flex items-center"
+                              className="mt-2 text-blue-600 hover:text-blue-700 inline-flex items-center"
                             >
                               <Copy className="h-4 w-4 mr-1" />
                               Copier
@@ -138,7 +138,7 @@ const NotificationDropdown = () => {
                           {new Date(notification.created_at).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
-                      <div className="ml-4 flex items-center space-x-2">
+                      <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
                         {!notification.read && (
                           <button
                             onClick={() => markAsRead(notification.id)}
