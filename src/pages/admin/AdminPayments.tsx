@@ -82,7 +82,6 @@ const AdminPayments = () => {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
-  const [paymentNote, setPaymentNote] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
@@ -196,15 +195,12 @@ const AdminPayments = () => {
     });
   };
 
-  const handleVerifyPayment = async (payment: PaymentVerification) => {
+  const handleProvideTransactionId = async (payment: PaymentVerification) => {
     try {
       const { error: paymentError } = await supabase
         .from('payment_verifications')
         .update({
-          verified_transaction_id: transactionId,
-          status: 'verified',
-          verified_at: new Date().toISOString(),
-          note: paymentNote
+          verified_transaction_id: transactionId
         })
         .eq('id', payment.id);
 
@@ -214,21 +210,20 @@ const AdminPayments = () => {
         .from('notifications')
         .insert({
           user_id: payment.user_id,
-          title: 'Paiement Vérifié',
-          message: `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été vérifié.\n` +
-                  `ID de transaction: ${transactionId}\n` +
+          title: 'ID de Transaction Fourni',
+          message: `L'administrateur a fourni l'ID de transaction pour votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA.\n` +
+                  `Veuillez entrer l'ID de transaction ${transactionId} pour finaliser votre investissement.\n` +
                   `Plan: ${payment.investment_plans.name}`,
           type: 'success'
         });
 
       if (notificationError) throw notificationError;
 
-      toast.success('Paiement vérifié avec succès');
+      toast.success('ID de transaction fourni avec succès');
       setSelectedPayment(null);
-      setPaymentNote('');
       loadPayments();
     } catch (error: any) {
-      console.error('Erreur lors de la vérification:', error);
+      console.error('Erreur lors de la fourniture de l\'ID de transaction:', error);
       toast.error(error.message);
     }
   };
@@ -239,8 +234,7 @@ const AdminPayments = () => {
         .from('payment_verifications')
         .update({
           status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          note: paymentNote
+          rejected_at: new Date().toISOString()
         })
         .eq('id', payment.id);
 
@@ -251,8 +245,7 @@ const AdminPayments = () => {
         .insert({
           user_id: payment.user_id,
           title: 'Paiement Rejeté',
-          message: `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été rejeté.\n` +
-                  `Raison: ${paymentNote || 'Non spécifiée'}`,
+          message: `Votre paiement de ${payment.amount.toLocaleString('fr-FR')} FCFA a été rejeté.`,
           type: 'error'
         });
 
@@ -260,7 +253,6 @@ const AdminPayments = () => {
 
       toast.success('Paiement rejeté');
       setSelectedPayment(null);
-      setPaymentNote('');
       loadPayments();
     } catch (error: any) {
       console.error('Erreur lors du rejet:', error);
@@ -337,7 +329,7 @@ const AdminPayments = () => {
 
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-green-900">Vérifiés</CardTitle>
+            <CardTitle className="text-green-900">ID Fournis</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -430,7 +422,7 @@ const AdminPayments = () => {
             className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="pending">En attente</option>
-            <option value="verified">Vérifiés</option>
+            <option value="verified">ID Fournis</option>
             <option value="rejected">Rejetés</option>
           </select>
         </div>
@@ -480,6 +472,9 @@ const AdminPayments = () => {
                     Méthode
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Transaction ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -517,6 +512,11 @@ const AdminPayments = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        {payment.transaction_id}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
                         ${payment.status === 'pending'
                           ? 'bg-yellow-100 text-yellow-800'
@@ -526,7 +526,7 @@ const AdminPayments = () => {
                         }`}
                       >
                         {payment.status === 'pending' ? 'En attente' :
-                         payment.status === 'verified' ? 'Vérifié' : 'Rejeté'}
+                         payment.status === 'verified' ? 'ID Fourni' : 'Rejeté'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -539,7 +539,7 @@ const AdminPayments = () => {
                       {payment.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleVerifyPayment(payment)}
+                            onClick={() => handleProvideTransactionId(payment)}
                             className="text-green-600 hover:text-green-900 mr-3"
                           >
                             <Check className="h-5 w-5" />
@@ -645,6 +645,16 @@ const AdminPayments = () => {
                 <p className="font-medium">{selectedPayment.payment_method}</p>
               </div>
               <div>
+                <p className="text-sm text-gray-500">Transaction ID</p>
+                <p className="font-medium">{selectedPayment.transaction_id}</p>
+              </div>
+              {selectedPayment.verified_transaction_id && (
+                <div>
+                  <p className="text-sm text-gray-500">ID de Transaction Fourni</p>
+                  <p className="font-medium">{selectedPayment.verified_transaction_id}</p>
+                </div>
+              )}
+              <div>
                 <p className="text-sm text-gray-500">Date</p>
                 <p className="font-medium">
                   {new Date(selectedPayment.created_at).toLocaleString('fr-FR')}
@@ -661,7 +671,7 @@ const AdminPayments = () => {
                   }`}
                 >
                   {selectedPayment.status === 'pending' ? 'En attente' :
-                   selectedPayment.status === 'verified' ? 'Vérifié' : 'Rejeté'}
+                   selectedPayment.status === 'verified' ? 'ID Fourni' : 'Rejeté'}
                 </span>
               </div>
             </div>
@@ -680,24 +690,12 @@ const AdminPayments = () => {
                     placeholder="Entrez l'ID de transaction"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Note (optionnel)
-                  </label>
-                  <textarea
-                    value={paymentNote}
-                    onChange={(e) => setPaymentNote(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
-                    rows={3}
-                    placeholder="Ajoutez une note..."
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-3 mt-4">
                   <button
-                    onClick={() => handleVerifyPayment(selectedPayment)}
+                    onClick={() => handleProvideTransactionId(selectedPayment)}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                   >
-                    Valider
+                    Fournir l'ID
                   </button>
                   <button
                     onClick={() => handleRejectPayment(selectedPayment)}

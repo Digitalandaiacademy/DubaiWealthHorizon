@@ -97,43 +97,8 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
         throw new Error('Utilisateur non connecté');
       }
 
-      // Créer l'investissement
-      const { error: investmentError } = await supabase
-        .from('user_investments')
-        .insert({
-          user_id: user.id,
-          plan_id: planId,
-          amount: amount,
-          status: 'active',
-          transaction_id: transactionId
-        });
-
-      if (investmentError) throw investmentError;
-
-      // Mettre à jour la vérification de paiement
-      const { error: verificationError } = await supabase
-        .from('payment_verifications')
-        .update({
-          status: 'verified',
-          verified_at: new Date().toISOString(),
-          verified_transaction_id: transactionId
-        })
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .eq('investment_plan', planId);
-
-      if (verificationError) throw verificationError;
-
-      // Mettre à jour le statut de l'utilisateur
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          payment_status: 'verified',
-          last_payment_verified_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (profileError) throw profileError;
+      // La création de l'investissement et la mise à jour du statut sont gérées 
+      // par la fonction RPC verify_payment_and_create_investment
 
       toast.success('Investissement créé avec succès');
       await get().loadUserInvestments();
