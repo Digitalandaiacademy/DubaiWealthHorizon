@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import InstallPWA from './components/InstallPWA';
 import SessionTracker from './components/SessionTracker';
 import PublicLayout from './components/PublicLayout';
 import Home from './pages/Home';
@@ -44,15 +45,31 @@ import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const { initialize, profile } = useAuthStore();
+  const [isServiceWorkerRegistered, setIsServiceWorkerRegistered] = useState(false);
 
   useEffect(() => {
     initialize();
+
+    // Enregistrement du service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('Service Worker enregistré avec succès:', registration);
+            setIsServiceWorkerRegistered(true);
+          })
+          .catch(error => {
+            console.log('Erreur lors de l\'enregistrement du Service Worker:', error);
+          });
+      });
+    }
   }, []);
 
   return (
     <Router>
       <SessionTracker />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
+        <InstallPWA />
         <Routes>
           {/* Routes publiques avec Navbar et Footer */}
           <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
