@@ -1,0 +1,61 @@
+* [33m9bc4f9b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m gestion du reseau Orange CM v2
+* [33mf2dba4e[m gestion du reseau Orange CM
+* [33m8244d4c[m Modificatio pour l'installation V3
+* [33me40fd93[m Modificatio pour l'installation V2
+* [33me3be920[m Modification de la position du bouton installer l'application
+* [33mc64fd60[m Mise en place de l'installation du site dans les smartphones
+* [33mde2ae31[m Modifications de l'envoi de l'email
+* [33mac78e0f[m Modifications pour valider l'id de transaction
+[31m|[m * [33mc8bf07b[m[33m ([m[1;32msauvegarde-temporaire-du-02-mars[m[33m)[m Sauvegarde temporaire des modifications locales
+[31m|[m[31m/[m  
+* [33m3ee626f[m modification page admin dashboard
+* [33ma1410e1[m modification useractivity
+* [33mbf1d519[m modification de la page adminpayement
+* [33ma14e375[m modification de la notification chez admin withdrawal l'ors de retrait
+* [33m3d76cf5[m modification de la page admin withdrawal, fix recharge du tableau en boucle
+* [33m3bc2c34[m Update AdminWithdrawals.tsx
+* [33m311a40f[m correstion de la page AdminInvestment
+* [33mdec35b2[m[33m ([m[1;32msauvegarde-temporaire[m[33m)[m Update Home.tsx
+* [33m6502ec5[m Update Investment.tsx
+* [33m6ad86e6[m gestion de la reinitialisation du mot de passe
+* [33m1975540[m afficher du solde des niveaux en fonctions du nombre de filleuls
+* [33m5008fb0[m afficher du solde de commission gagné et retiré puis disponible dans la page de referral
+* [33medac5d1[m afficher les filleuls de niveau 2 seulement
+* [33m6df9164[m afficher les filleuls de niveau 1 et 2
+* [33mae4dbe4[m mise à jour de l'affichage de la page adminwithdrawals apres la recharge de la page
+* [33m2908d73[m mise à jour du graph dans admin payment
+* [33mfcc071a[m mise à jour de NotificationDropdown
+* [33mb61066e[m mise à jour des notifications pour la vérification des paiements d'investissement avec leur ID transaction
+* [33m3590f2a[m mise à jour des tracking des users
+* [33me96e22d[m mise à jour des tracking des users
+* [33md7cd65c[m mise à jour des pages de retraits
+* [33m9c576e0[m mise à jour de la page retrait admin
+* [33m8d06240[m ajout du tracking des users
+* [33m29c9b63[m ajout de google analytics seul dans la page index.html
+* [33m2a63028[m ajout de google analytics dans la page index.html
+* [33m1cdf0e9[m ajout du code de parrainage automatiquement dans la page de création de compte
+* [33mcd90450[m mise à jour de la page admin paiement
+* [33m9acac07[m mise à jour du footer et du mode de paiement sur home
+* [33m15ff80d[m mise à jour paiement pour montant minimal
+* [33mfbf25bb[m mise à jour des retraits utilisateur et admin
+* [33m39993f0[m ajout de la page lega et finalisation de la page new invest
+* [33m8ac489c[m retrait du bouton copier
+* [33mc6b91ce[m mise à jour de la page NewInvestment avec un le bouton confirmer l'investissement fonctionnel
+* [33md4c0c74[m mise à jour du message whatsapp et telegram
+* [33mb5d8099[m mise à jour des roi et pourcentage des gains
+* [33m2c3ba92[m mise à jour de la page newinvest 1
+* [33m8444cca[m mise à jour du bouton de vérification de l'id de transaction
+[32m|[m *   [33md80b70f[m[33m ([m[1;35mrefs/stash[m[33m)[m WIP on master: b31bd1e mise à jour 3
+[32m|[m [33m|[m[34m\[m  
+[32m|[m [33m|[m * [33m26f1c4d[m index on master: b31bd1e mise à jour 3
+[32m|[m [33m|[m[33m/[m  
+[32m|[m * [33mb31bd1e[m mise à jour 3
+[32m|[m * [33mcc5b470[m mise à jour 2
+[32m|[m[32m/[m  
+* [33mfba942b[m ajout du bouton telegram
+* [33m50a04cb[m mise à jour de l'animation du compteur de gain
+* [33m135911d[m feat: Ajout du tableau de bord admin avec gestion des plans et paramètres
+* [33m418df8a[m feat: Amélioration du système de vérification des paiements
+* [33m1467aa1[m Add production environment variables
+* [33m56c492d[m Add Netlify configuration
+* [33m9559d43[m Initial commit: DubaiWealthHorizon platform
