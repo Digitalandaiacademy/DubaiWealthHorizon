@@ -411,7 +411,7 @@ const NewInvestment = () => {
                       <div className="space-y-4">
                         <ol className="list-decimal pl-5 space-y-2">
                           <li>Copiez l'adresse <span className="font-medium">P1052009976</span></li>
-                          <li>Effectuez le paiement sur Izichange avec <span className="font-medium">Payeer USD P1052009976</span></li>
+                          <li>Effectuez le paiement sur Izichange avec <span className="font-medium">Payeer USD P1052009976</span> sur <a href="https://izichange.com/dashboard/pu_echange" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">effectué le paiement</a></li>
                           <li>Revenez dans le site</li>
                           <li>Envoyez la capture d'écran du paiement OM, MoMo, Moov etc ou celui de Izichange par WhatsApp ou telegram</li>
                           <li>Revenez cliquer sur Confirmer l'investissement</li>
