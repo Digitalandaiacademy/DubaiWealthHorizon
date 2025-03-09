@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import TransactionModal from '../../components/ui/TransactionModal';
 import { useTransactionStore } from '../../store/transactionStore';
 import { ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
 
@@ -24,15 +25,14 @@ const Transactions = () => {
     stopAutoUpdate
   } = useTransactionStore();
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
   useEffect(() => {
-    // Chargement initial
     loadTransactions();
-    
-    // Configuration de la mise à jour automatique toutes les heures
     const updateInterval = setInterval(() => {
       loadTransactions();
-    }, 60 * 60 * 1000); // 1 heure en millisecondes
-
+    }, 60 * 60 * 1000);
     startAutoUpdate();
 
     return () => {
@@ -87,6 +87,11 @@ const Transactions = () => {
           text: 'Transaction'
         };
     }
+  };
+
+  const handleRowClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
   };
 
   return (
@@ -155,7 +160,7 @@ const Transactions = () => {
                   {transactions.map((transaction) => {
                     const { icon, text } = getTypeDetails(transaction.type);
                     return (
-                      <tr key={transaction.id}>
+                      <tr key={transaction.id} onClick={() => handleRowClick(transaction)} className="cursor-pointer">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(transaction.created_at).toLocaleString('fr-FR', {
                             year: 'numeric',
@@ -196,6 +201,12 @@ const Transactions = () => {
           )}
         </div>
       </div>
+
+      <TransactionModal 
+        isOpen={isModalOpen} 
+        transaction={selectedTransaction} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 };
