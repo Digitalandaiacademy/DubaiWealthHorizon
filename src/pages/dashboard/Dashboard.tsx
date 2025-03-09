@@ -77,14 +77,28 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* En-tête du tableau de bord */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Bonjour, {profile?.full_name || 'Investisseur'}
-        </h1>
-        <p className="text-gray-600">
-          Bienvenue sur votre tableau de bord DubaiWealth Horizon
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Bonjour, {profile?.full_name || 'Investisseur'}
+          </h1>
+          <p className="text-gray-600">
+            Bienvenue sur votre tableau de bord DubaiWealth Horizon
+          </p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="p-2 rounded-lg hover:bg-gray-100"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M8 16H3v5"></path>
+          </svg>
+        </button>
       </div>
+
 
       {/* Cartes des statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -272,6 +286,24 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+      {/* Bouton d'assistance WhatsApp */}
+      <div className="fixed bottom-6 right-6 flex flex-col items-center space-y-2">
+        <span className="text-gray-700 text-sm bg-white px-2 py-1 rounded-md shadow-md">
+          Besoin d'aide ?
+        </span>
+        <a 
+          href="https://wa.me/2348062450400?text=Besoin%20d'assistance" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.5 12.3a9.8 9.8 0 0 1-1.1 4.5c-.7 1.5-2.2 3.3-3.7 4.2a10.2 10.2 0 0 1-4.5 1.1 9.8 9.8 0 0 1-4.5-1.1L2 22l1.1-5.3a9.8 9.8 0 0 1-1.1-4.5 10.2 10.2 0 0 1 1.1-4.5 9.8 9.8 0 0 1 4.5-3.7 10.2 10.2 0 0 1 4.5-1.1h.5a9.8 9.8 0 0 1 4.5 1.1 10.2 10.2 0 0 1 3.7 3.7 9.8 9.8 0 0 1 1.1 4.5z"/>
+            <path d="M16.2 14.7c-.3 1-1.6 1.6-2.7 1.2-1.2-.5-4.3-2.6-5.4-5.5-.4-1 .1-2.4 1.2-2.7.6-.2 1.3 0 1.7.6l.8 1.2c.3.4.3.9 0 1.3l-.6.8c.5 1.1 1.3 1.9 2.4 2.4l.8-.6c.4-.3.9-.3 1.3 0l1.2.8c.6.4.8 1.1.6 1.7z"/>
+          </svg>
+        </a>
+      </div>
+
     </div>
   );
 };
