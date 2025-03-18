@@ -161,6 +161,12 @@ const Transactions = () => {
                     const { icon, text } = getTypeDetails(transaction.type);
                     return (
                       <tr key={transaction.id} onClick={() => handleRowClick(transaction)} className="cursor-pointer">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {icon}
+                            <span className="ml-2 text-sm text-gray-900">{text}</span>
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(transaction.created_at).toLocaleString('fr-FR', {
                             year: 'numeric',
@@ -169,12 +175,6 @@ const Transactions = () => {
                             hour: '2-digit',
                             minute: '2-digit'
                           })}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {icon}
-                            <span className="ml-2 text-sm text-gray-900">{text}</span>
-                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`text-sm font-medium ${
@@ -196,6 +196,7 @@ const Transactions = () => {
                     );
                   })}
                 </tbody>
+
               </table>
             </div>
           )}
