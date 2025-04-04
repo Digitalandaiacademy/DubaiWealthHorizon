@@ -13,7 +13,10 @@ import {
   Legend,
   ResponsiveContainer,
   AreaChart,
-  Area
+  Area,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import {
   Card,
@@ -33,7 +36,8 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
-  Percent
+  Percent,
+  Award
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -45,6 +49,12 @@ interface DashboardStats {
   monthlyData: any[];
   userGrowth: any[];
   recentActivity: Activity[];
+  referralStats: {
+    totalReferrals: number;
+    activeReferrals: number;
+    totalCommissions: number;
+    topReferrers: any[];
+  };
 }
 
 interface InvestmentTotals {
@@ -56,12 +66,14 @@ interface InvestmentTotals {
 
 interface Activity {
   id: string;
-  type: 'investment' | 'payment' | 'withdrawal' | 'user';
+  type: 'investment' | 'payment' | 'withdrawal' | 'user' | 'referral';
   description: string;
   timestamp: string;
   amount?: number;
   status?: string;
 }
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -77,7 +89,13 @@ const AdminDashboard = () => {
     dailyROI: 0,
     monthlyData: [],
     userGrowth: [],
-    recentActivity: []
+    recentActivity: [],
+    referralStats: {
+      totalReferrals: 0,
+      activeReferrals: 0,
+      totalCommissions: 0,
+      topReferrers: []
+    }
   });
   const [investmentTotals, setInvestmentTotals] = useState<InvestmentTotals>({
     pending: 0,
@@ -180,6 +198,9 @@ const AdminDashboard = () => {
       const monthlyData = await loadMonthlyData();
       const userGrowth = await loadUserGrowth();
       const recentActivity = await loadRecentActivity();
+      
+      // Charger les statistiques de parrainage
+      const referralStats = await loadReferralStats();
 
       setStats({
         totalUsers: totalUsers || 0,
@@ -189,7 +210,8 @@ const AdminDashboard = () => {
         dailyROI,
         monthlyData,
         userGrowth,
-        recentActivity
+        recentActivity,
+        referralStats
       });
 
       setLastUpdate(new Date());
@@ -236,6 +258,73 @@ const AdminDashboard = () => {
     }));
   };
 
+  const loadReferralStats = async () => {
+    try {
+      // Get all referral status entries
+      const { data: referralData, error } = await supabase
+        .from('referral_status')
+        .select(`
+          *,
+          referrer:referrer_id(
+            id,
+            full_name,
+            email
+          )
+        `);
+        
+      if (error) throw error;
+      
+      // Calculate total referrals
+      const totalReferrals = referralData?.length || 0;
+      
+      // Calculate active referrals
+      const activeReferrals = referralData?.filter(ref => ref.is_active).length || 0;
+      
+      // Calculate total commissions
+      const totalCommissions = referralData?.reduce((sum, ref) => sum + (ref.total_commission || 0), 0) || 0;
+      
+      // Get top referrers
+      const referrerMap = new Map();
+      
+      referralData?.forEach(ref => {
+        if (!ref.referrer) return;
+        
+        const referrerId = ref.referrer.id;
+        if (!referrerMap.has(referrerId)) {
+          referrerMap.set(referrerId, {
+            id: referrerId,
+            name: ref.referrer.full_name || ref.referrer.email,
+            referralCount: 0,
+            commission: 0
+          });
+        }
+        
+        const referrer = referrerMap.get(referrerId);
+        referrer.referralCount += 1;
+        referrer.commission += (ref.total_commission || 0);
+      });
+      
+      const topReferrers = Array.from(referrerMap.values())
+        .sort((a, b) => b.referralCount - a.referralCount)
+        .slice(0, 5);
+      
+      return {
+        totalReferrals,
+        activeReferrals,
+        totalCommissions,
+        topReferrers
+      };
+    } catch (error) {
+      console.error('Error loading referral stats:', error);
+      return {
+        totalReferrals: 0,
+        activeReferrals: 0,
+        totalCommissions: 0,
+        topReferrers: []
+      };
+    }
+  };
+
   const loadRecentActivity = async () => {
     const activities: Activity[] = [];
 
@@ -279,6 +368,30 @@ const AdminDashboard = () => {
         amount: payment.amount,
         status: payment.status
       });
+    });
+    
+    // Dernières activités de parrainage
+    const { data: referrals } = await supabase
+      .from('referral_status')
+      .select(`
+        *,
+        referrer:referrer_id(full_name),
+        referred:referred_id(full_name)
+      `)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+      
+    referrals?.forEach(referral => {
+      if (referral.total_commission > 0) {
+        activities.push({
+          id: referral.id,
+          type: 'referral',
+          description: `Commission de parrainage pour ${referral.referrer?.full_name || 'Utilisateur'}`,
+          timestamp: referral.updated_at,
+          amount: referral.total_commission,
+          status: 'completed'
+        });
+      }
     });
 
     return activities.sort((a, b) => 
@@ -457,6 +570,142 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
+      {/* Statistiques de parrainage */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistiques de Parrainage</CardTitle>
+            <CardDescription>
+              Vue d'ensemble du programme de parrainage
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Filleuls</p>
+                    <p className="text-2xl font-bold text-blue-700">{stats.referralStats.totalReferrals}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-500" />
+                </div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Filleuls Actifs</p>
+                    <p className="text-2xl font-bold text-green-700">{stats.referralStats.activeReferrals}</p>
+                  </div>
+                  <Activity className="h-8 w-8 text-green-500" />
+                </div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Commissions Totales</p>
+                    <p className="text-2xl font-bold text-purple-700">
+                      {stats.referralStats.totalCommissions.toLocaleString('fr-FR')} FCFA
+                    </p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-purple-500" />
+                </div>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Taux de Conversion</p>
+                    <p className="text-2xl font-bold text-orange-700">
+                      {stats.referralStats.totalReferrals > 0 
+                        ? ((stats.referralStats.activeReferrals / stats.referralStats.totalReferrals) * 100).toFixed(1) 
+                        : '0'}%
+                    </p>
+                  </div>
+                  <Award className="h-8 w-8 text-orange-500" />
+                </div>
+              </div>
+            </div>
+            
+            <h3 className="text-lg font-medium mb-4">Top 5 Parrains</h3>
+            <div className="space-y-3">
+              {stats.referralStats.topReferrers.length > 0 ? (
+                stats.referralStats.topReferrers.map((referrer, index) => (
+                  <div key={referrer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold mr-3">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{referrer.name}</p>
+                        <p className="text-xs text-gray-500">{referrer.referralCount} filleuls</p>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-green-600">
+                      {referrer.commission.toLocaleString('fr-FR')} FCFA
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500">Aucun parrain actif</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribution des Commissions</CardTitle>
+            <CardDescription>
+              Répartition des commissions par niveau
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Niveau 1 (5%)', value: stats.referralStats.totalCommissions * 0.7 },
+                      { name: 'Niveau 2 (2%)', value: stats.referralStats.totalCommissions * 0.3 }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={120}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {[0, 1].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${Number(value).toLocaleString('fr-FR')} FCFA`} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Commission Moyenne</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {stats.referralStats.totalReferrals > 0 
+                    ? (stats.referralStats.totalCommissions / stats.referralStats.totalReferrals).toLocaleString('fr-FR')
+                    : '0'} FCFA
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Taux d'Activité</p>
+                <p className="text-xl font-bold text-green-700">
+                  {stats.referralStats.totalReferrals > 0 
+                    ? ((stats.referralStats.activeReferrals / stats.referralStats.totalReferrals) * 100).toFixed(1)
+                    : '0'}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -549,6 +798,7 @@ const AdminDashboard = () => {
                   {activity.type === 'investment' && <TrendingUp className="h-5 w-5 text-blue-500" />}
                   {activity.type === 'payment' && <DollarSign className="h-5 w-5 text-green-500" />}
                   {activity.type === 'withdrawal' && <ArrowDownRight className="h-5 w-5 text-red-500" />}
+                  {activity.type === 'referral' && <Award className="h-5 w-5 text-purple-500" />}
                   <div>
                     <p className="text-sm font-medium">{activity.description}</p>
                     <p className="text-xs text-gray-500">
@@ -559,7 +809,7 @@ const AdminDashboard = () => {
                 {activity.amount && (
                   <span className={`text-sm font-medium ${
                     activity.status === 'pending' ? 'text-yellow-600' :
-                    activity.status === 'verified' || activity.status === 'active' ? 'text-green-600' :
+                    activity.status === 'verified' || activity.status === 'active' || activity.status === 'completed' ? 'text-green-600' :
                     'text-red-600'
                   }`}>
                     {activity.amount.toLocaleString('fr-FR')} FCFA

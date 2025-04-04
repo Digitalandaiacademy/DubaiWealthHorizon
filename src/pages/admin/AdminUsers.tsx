@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Search, User, Mail, Phone, Shield, UserPlus, Users as UsersIcon, Activity, Calendar } from 'lucide-react';
+import { Search, User, Mail, Phone, Shield, UserPlus, Users as UsersIcon, Activity, Calendar, Award, DollarSign, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface UserProfile {
@@ -12,6 +12,42 @@ interface UserProfile {
   is_admin: boolean;
   created_at: string;
   last_sign_in: string;
+  referral_code: string;
+  referral_stats?: {
+    directReferrals: number;
+    indirectReferrals: number;
+    totalCommission: number;
+    activeReferrals: number;
+    directReferralsList: ReferralUser[];
+    indirectReferralsList: ReferralUser[];
+  };
+}
+
+interface ReferralUser {
+  id: string;
+  full_name: string;
+  email: string;
+  created_at: string;
+  is_active: boolean;
+  total_investment: number;
+  total_commission: number;
+}
+
+interface ReferralStatus {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  level: number;
+  is_active: boolean;
+  total_investment: number;
+  total_commission: number;
+  created_at: string;
+  referred: {
+    id: string;
+    full_name: string;
+    email: string;
+    created_at: string;
+  };
 }
 
 const AdminUsers = () => {
@@ -23,8 +59,12 @@ const AdminUsers = () => {
     total: 0,
     active: 0,
     admins: 0,
-    newThisMonth: 0
+    newThisMonth: 0,
+    totalReferrals: 0,
+    totalCommissions: 0
   });
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [expandedReferralSection, setExpandedReferralSection] = useState<{[key: string]: boolean}>({});
 
   useEffect(() => {
     loadUsers();
@@ -41,6 +81,9 @@ const AdminUsers = () => {
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
 
+    const totalReferrals = users.reduce((sum, user) => sum + (user.referral_stats?.directReferrals || 0) + (user.referral_stats?.indirectReferrals || 0), 0);
+    const totalCommissions = users.reduce((sum, user) => sum + (user.referral_stats?.totalCommission || 0), 0);
+
     const stats = {
       total: users.length,
       active: users.filter(user => user.last_sign_in && new Date(user.last_sign_in) > new Date(now.setDate(now.getDate() - 30))).length,
@@ -48,7 +91,9 @@ const AdminUsers = () => {
       newThisMonth: users.filter(user => {
         const createdDate = new Date(user.created_at);
         return createdDate.getMonth() === thisMonth && createdDate.getFullYear() === thisYear;
-      }).length
+      }).length,
+      totalReferrals,
+      totalCommissions
     };
 
     setUserStats(stats);
@@ -57,13 +102,85 @@ const AdminUsers = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Get all users with their profiles
+      const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (userError) throw userError;
+      
+      // Get referral status data with referred user details
+      const { data: referralData, error: referralError } = await supabase
+        .from('referral_status')
+        .select(`
+          *,
+          referred:referred_id (
+            id,
+            full_name,
+            email,
+            created_at
+          )
+        `);
+        
+      if (referralError) throw referralError;
+      
+      // Process users and add referral stats
+      const processedUsers = userData.map(user => {
+        // Find direct referrals (level 1)
+        const directReferrals = referralData.filter(ref => 
+          ref.referrer_id === user.id && ref.level === 1
+        );
+        
+        // Find indirect referrals (level 2)
+        const indirectReferrals = referralData.filter(ref => 
+          ref.referrer_id === user.id && ref.level === 2
+        );
+        
+        // Calculate total commission
+        const totalCommission = [...directReferrals, ...indirectReferrals]
+          .reduce((sum, ref) => sum + (ref.total_commission || 0), 0);
+          
+        // Count active referrals
+        const activeReferrals = [...directReferrals, ...indirectReferrals]
+          .filter(ref => ref.is_active).length;
+          
+        // Create lists of direct and indirect referrals with user details
+        const directReferralsList = directReferrals.map(ref => ({
+          id: ref.referred_id,
+          full_name: ref.referred?.full_name || 'Utilisateur inconnu',
+          email: ref.referred?.email || 'Email inconnu',
+          created_at: ref.referred?.created_at || ref.created_at,
+          is_active: ref.is_active,
+          total_investment: ref.total_investment || 0,
+          total_commission: ref.total_commission || 0
+        }));
+        
+        const indirectReferralsList = indirectReferrals.map(ref => ({
+          id: ref.referred_id,
+          full_name: ref.referred?.full_name || 'Utilisateur inconnu',
+          email: ref.referred?.email || 'Email inconnu',
+          created_at: ref.referred?.created_at || ref.created_at,
+          is_active: ref.is_active,
+          total_investment: ref.total_investment || 0,
+          total_commission: ref.total_commission || 0
+        }));
+          
+        return {
+          ...user,
+          referral_stats: {
+            directReferrals: directReferrals.length,
+            indirectReferrals: indirectReferrals.length,
+            totalCommission,
+            activeReferrals,
+            directReferralsList,
+            indirectReferralsList
+          }
+        };
+      });
+
+      setUsers(processedUsers || []);
     } catch (error: any) {
       console.error('Erreur lors du chargement des utilisateurs:', error);
       toast.error(error.message);
@@ -108,11 +225,28 @@ const AdminUsers = () => {
     }));
   };
 
+  const toggleUserExpansion = (userId: string) => {
+    setExpandedUser(expandedUser === userId ? null : userId);
+  };
+
+  const toggleReferralSection = (userId: string, section: string) => {
+    const key = `${userId}-${section}`;
+    setExpandedReferralSection(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const isReferralSectionExpanded = (userId: string, section: string) => {
+    const key = `${userId}-${section}`;
+    return expandedReferralSection[key] || false;
+  };
+
   const filteredUsers = users.filter(user => {
     const searchStr = searchTerm.toLowerCase();
-    const matchesSearch = user.full_name.toLowerCase().includes(searchStr) ||
+    const matchesSearch = user.full_name?.toLowerCase().includes(searchStr) ||
       user.email.toLowerCase().includes(searchStr) ||
-      user.phone_number.toLowerCase().includes(searchStr);
+      user.phone_number?.toLowerCase().includes(searchStr);
 
     if (selectedFilter === 'tous') return matchesSearch;
     if (selectedFilter === 'admins') return matchesSearch && user.is_admin;
@@ -121,13 +255,16 @@ const AdminUsers = () => {
       lastMonth.setMonth(lastMonth.getMonth() - 1);
       return matchesSearch && user.last_sign_in && new Date(user.last_sign_in) > lastMonth;
     }
+    if (selectedFilter === 'parrains') {
+      return matchesSearch && (user.referral_stats?.directReferrals || 0) > 0;
+    }
     return matchesSearch;
   });
 
   return (
     <div className="space-y-6 p-6">
       {/* En-tête avec statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -162,6 +299,24 @@ const AdminUsers = () => {
               <p className="text-2xl font-bold text-gray-900">{userStats.newThisMonth}</p>
             </div>
             <UserPlus className="h-8 w-8 text-orange-500" />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Filleuls</p>
+              <p className="text-2xl font-bold text-gray-900">{userStats.totalReferrals}</p>
+            </div>
+            <Award className="h-8 w-8 text-indigo-500" />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Commissions</p>
+              <p className="text-2xl font-bold text-gray-900">{userStats.totalCommissions.toLocaleString('fr-FR')}</p>
+            </div>
+            <DollarSign className="h-8 w-8 text-emerald-500" />
           </div>
         </div>
       </div>
@@ -225,6 +380,16 @@ const AdminUsers = () => {
           >
             Actifs
           </button>
+          <button
+            onClick={() => setSelectedFilter('parrains')}
+            className={`px-4 py-2 rounded-lg ${
+              selectedFilter === 'parrains' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Parrains
+          </button>
         </div>
       </div>
 
@@ -246,6 +411,9 @@ const AdminUsers = () => {
                     Contact
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Parrainage
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date d'inscription
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -258,68 +426,285 @@ const AdminUsers = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                            <span className="text-white font-medium text-lg">
-                              {user.full_name.charAt(0).toUpperCase()}
+                  <React.Fragment key={user.id}>
+                    <tr 
+                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${expandedUser === user.id ? 'bg-blue-50' : ''}`}
+                      onClick={() => toggleUserExpansion(user.id)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                              <span className="text-white font-medium text-lg">
+                                {user.full_name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.full_name || 'Utilisateur sans nom'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-500">{user.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-500">{user.phone_number || 'Non renseigné'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <Award className="h-4 w-4 text-indigo-400" />
+                            <span className="text-sm text-gray-900">
+                              {user.referral_stats?.directReferrals || 0} directs / {user.referral_stats?.indirectReferrals || 0} indirects
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <DollarSign className="h-4 w-4 text-green-400" />
+                            <span className="text-sm text-gray-900">
+                              {(user.referral_stats?.totalCommission || 0).toLocaleString('fr-FR')} FCFA
                             </span>
                           </div>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.full_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">
+                            {new Date(user.created_at).toLocaleDateString('fr-FR')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <Activity className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">
+                            {user.last_sign_in 
+                              ? new Date(user.last_sign_in).toLocaleDateString('fr-FR')
+                              : 'Jamais'
+                            }
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAdminStatus(user.id, user.is_admin);
+                          }}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors
+                            ${user.is_admin
+                              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            }`}
+                        >
+                          <Shield className={`h-4 w-4 mr-1 ${user.is_admin ? 'text-blue-600' : 'text-gray-400'}`} />
+                          {user.is_admin ? 'Admin' : 'Utilisateur'}
+                        </button>
+                      </td>
+                    </tr>
+                    
+                    {/* Expanded user details */}
+                    {expandedUser === user.id && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 bg-blue-50">
+                          <div className="space-y-6">
+                            {/* Informations de parrainage */}
+                            <div className="bg-white p-4 rounded-lg shadow-sm">
+                              <h3 className="text-lg font-medium text-gray-900 mb-4">Détails du Parrainage</h3>
+                              <div className="space-y-4">
+                                <div>
+                                  <p className="text-sm text-gray-500">Code de parrainage</p>
+                                  <p className="text-base font-medium">{user.referral_code || 'Non défini'}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm text-gray-500">Filleuls directs (Niveau 1)</p>
+                                    <p className="text-base font-medium">{user.referral_stats?.directReferrals || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">Filleuls indirects (Niveau 2)</p>
+                                    <p className="text-base font-medium">{user.referral_stats?.indirectReferrals || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">Filleuls actifs</p>
+                                    <p className="text-base font-medium">{user.referral_stats?.activeReferrals || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">Commission totale</p>
+                                    <p className="text-base font-medium text-green-600">
+                                      {(user.referral_stats?.totalCommission || 0).toLocaleString('fr-FR')} FCFA
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Liste des filleuls directs */}
+                              {(user.referral_stats?.directReferrals || 0) > 0 && (
+                                <div className="mt-6">
+                                  <div 
+                                    className="flex items-center justify-between cursor-pointer bg-blue-50 p-3 rounded-lg"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleReferralSection(user.id, 'direct');
+                                    }}
+                                  >
+                                    <h4 className="font-medium text-blue-800">Liste des filleuls directs (Niveau 1)</h4>
+                                    {isReferralSectionExpanded(user.id, 'direct') ? (
+                                      <ChevronUp className="h-5 w-5 text-blue-600" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5 text-blue-600" />
+                                    )}
+                                  </div>
+                                  
+                                  {isReferralSectionExpanded(user.id, 'direct') && (
+                                    <div className="mt-3 overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-200 border rounded-lg">
+                                        <thead className="bg-gray-50">
+                                          <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date d'inscription</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investissement</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                          {user.referral_stats?.directReferralsList.map((referral) => (
+                                            <tr key={referral.id} className="hover:bg-gray-50">
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{referral.full_name}</td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{referral.email}</td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                  referral.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                  {referral.is_active ? 'Actif' : 'Inactif'}
+                                                </span>
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                                {referral.total_investment.toLocaleString('fr-FR')} FCFA
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-medium">
+                                                {referral.total_commission.toLocaleString('fr-FR')} FCFA
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Liste des filleuls indirects */}
+                              {(user.referral_stats?.indirectReferrals || 0) > 0 && (
+                                <div className="mt-6">
+                                  <div 
+                                    className="flex items-center justify-between cursor-pointer bg-purple-50 p-3 rounded-lg"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleReferralSection(user.id, 'indirect');
+                                    }}
+                                  >
+                                    <h4 className="font-medium text-purple-800">Liste des filleuls indirects (Niveau 2)</h4>
+                                    {isReferralSectionExpanded(user.id, 'indirect') ? (
+                                      <ChevronUp className="h-5 w-5 text-purple-600" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5 text-purple-600" />
+                                    )}
+                                  </div>
+                                  
+                                  {isReferralSectionExpanded(user.id, 'indirect') && (
+                                    <div className="mt-3 overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-200 border rounded-lg">
+                                        <thead className="bg-gray-50">
+                                          <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date d'inscription</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investissement</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                          {user.referral_stats?.indirectReferralsList.map((referral) => (
+                                            <tr key={referral.id} className="hover:bg-gray-50">
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{referral.full_name}</td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{referral.email}</td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                  referral.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                  {referral.is_active ? 'Actif' : 'Inactif'}
+                                                </span>
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                                {referral.total_investment.toLocaleString('fr-FR')} FCFA
+                                              </td>
+                                              <td className="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-medium">
+                                                {referral.total_commission.toLocaleString('fr-FR')} FCFA
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Informations supplémentaires */}
+                            <div className="bg-white p-4 rounded-lg shadow-sm">
+                              <h3 className="text-lg font-medium text-gray-900 mb-4">Informations Supplémentaires</h3>
+                              <div className="space-y-4">
+                                <div>
+                                  <p className="text-sm text-gray-500">ID Utilisateur</p>
+                                  <p className="text-xs font-mono bg-gray-100 p-2 rounded">{user.id}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500">Statut du compte</p>
+                                  <div className="flex items-center mt-1">
+                                    <span className={`w-3 h-3 rounded-full ${user.last_sign_in && new Date(user.last_sign_in) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></span>
+                                    <span className="text-sm">
+                                      {user.last_sign_in && new Date(user.last_sign_in) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) ? 'Actif' : 'Inactif'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500">Actions</p>
+                                  <div className="flex space-x-2 mt-1">
+                                    <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                      Envoyer un message
+                                    </button>
+                                    <button className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                      Suspendre
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">{user.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-500">{user.phone_number}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString('fr-FR')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <Activity className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          {user.last_sign_in 
-                            ? new Date(user.last_sign_in).toLocaleDateString('fr-FR')
-                            : 'Jamais'
-                          }
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => toggleAdminStatus(user.id, user.is_admin)}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors
-                          ${user.is_admin
-                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          }`}
-                      >
-                        <Shield className={`h-4 w-4 mr-1 ${user.is_admin ? 'text-blue-600' : 'text-gray-400'}`} />
-                        {user.is_admin ? 'Admin' : 'Utilisateur'}
-                      </button>
-                    </td>
-                  </tr>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

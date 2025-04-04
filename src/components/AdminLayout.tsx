@@ -10,7 +10,8 @@ import {
   TrendingUp,
   Wallet,
   Activity,
-  UserCheck
+  UserCheck,
+  Bell
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -63,6 +64,11 @@ const AdminLayout = () => {
       title: 'Investissements',
       icon: <TrendingUp className="h-5 w-5" />,
       path: '/admin/investments'
+    },
+    {
+      title: 'Notifications',
+      icon: <Bell className="h-5 w-5" />,
+      path: '/admin/notifications'
     },
     {
       title: 'Paramètres',

@@ -14,7 +14,10 @@ import {
   ArrowDownCircle,
   Shield,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  BarChart2,
+  Target,
+  Award
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import NotificationDropdown from './NotificationDropdown';
@@ -34,6 +37,9 @@ const DashboardLayout = () => {
     { name: 'Transactions', href: '/dashboard/transactions', icon: History },
     { name: 'Retraits', href: '/dashboard/withdrawals', icon: ArrowDownCircle },
     { name: 'Parrainage', href: '/dashboard/referral', icon: Users },
+    { name: 'Analyse', href: '/dashboard/analytics', icon: BarChart2 },
+    { name: 'Performance Parrainage', href: '/dashboard/referral-performance', icon: Award },
+    { name: 'Objectifs', href: '/dashboard/goals', icon: Target },
     { name: 'Mon profil', href: '/dashboard/profile', icon: UserCircle },
   ];
 

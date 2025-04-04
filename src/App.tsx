@@ -41,147 +41,46 @@ import Lexique from './pages/legal/Lexique';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import UserActivity from './pages/admin/UserActivity';
 import UserTracking from './pages/admin/UserTracking';
+import AdminNotifications from './pages/admin/AdminNotifications';
 import ResetPassword from './pages/ResetPassword';
+import Analytics from './pages/dashboard/Analytics';
+import ReferralPerformance from './pages/dashboard/ReferralPerformance';
+import Goals from './pages/dashboard/Goals';
 import toast from 'react-hot-toast';
 
 function App() {
   const { initialize, profile } = useAuthStore();
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<ServiceWorkerRegistration | null>(null);
-
-  // Check if running in StackBlitz
-  const isStackBlitz = window.location.hostname.includes('stackblitz') || 
-                      window.navigator.userAgent.includes('StackBlitz');
+  const [isStackBlitz, setIsStackBlitz] = useState(false);
 
   useEffect(() => {
     initialize();
 
-    // Register service worker only if not in StackBlitz and browser supports it
-    if ('serviceWorker' in navigator && !isStackBlitz) {
-      try {
+    // Check if running in StackBlitz
+    const isRunningInStackBlitz = window.location.hostname.includes('stackblitz') || 
+                                 window.navigator.userAgent.includes('StackBlitz');
+    setIsStackBlitz(isRunningInStackBlitz);
+
+    // Only try to register service worker if not in StackBlitz
+    if (!isRunningInStackBlitz) {
+      if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
             .then(registration => {
               console.log('Service Worker registered successfully:', registration);
-              setServiceWorkerRegistration(registration);
-              
-              // Check for updates
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                if (newWorker) {
-                  newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      setUpdateAvailable(true);
-                    }
-                  });
-                }
-              });
             })
             .catch(error => {
-              // Don't show error toast in StackBlitz since SW is not supported
-              if (!isStackBlitz) {
-                console.error('Service Worker registration failed:', error);
-              }
+              console.log('Service Worker registration failed:', error);
             });
-          
-          // Handle controller change (when a new service worker takes over)
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('New service worker controller, page will reload');
-            // Wait a moment before reloading to ensure the new service worker is fully active
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-          });
-        });
-      } catch (error) {
-        console.error('Error setting up service worker:', error);
-      }
-    }
-    
-    // Check for app version changes
-    const appVersion = localStorage.getItem('app_version');
-    const currentVersion = '1.0.1'; // Update this when deploying new versions
-    
-    if (appVersion !== currentVersion) {
-      // Clear cache and reload if version changed
-      if ('caches' in window) {
-        caches.keys().then(cacheNames => {
-          cacheNames.forEach(cacheName => {
-            caches.delete(cacheName);
-          });
-        });
-      }
-      
-      localStorage.setItem('app_version', currentVersion);
-      
-      // Only show update message if not first visit
-      if (appVersion) {
-        toast.success('Application mise à jour avec succès !', {
-          duration: 3000,
-          position: 'top-center',
-          icon: '🚀'
         });
       }
     }
   }, []);
-
-  // Function to update the service worker
-  const updateServiceWorker = () => {
-    if (serviceWorkerRegistration && serviceWorkerRegistration.waiting) {
-      // Send message to service worker to skip waiting
-      serviceWorkerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      setUpdateAvailable(false);
-    }
-  };
-
-  // Function to clear cache manually
-  const clearCache = () => {
-    if (serviceWorkerRegistration) {
-      navigator.serviceWorker.controller?.postMessage({
-        type: 'CLEAR_CACHE'
-      }, [new MessageChannel().port2]);
-      
-      toast.success('Cache effacé avec succès !', {
-        duration: 2000,
-        position: 'top-center'
-      });
-      
-      // Reload after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    }
-  };
 
   return (
     <Router>
       <SessionTracker />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
         {!isStackBlitz && <InstallPWA />}
-        
-        {/* Update notification */}
-        {updateAvailable && !isStackBlitz && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center">
-            <span className="mr-2">Nouvelle version disponible !</span>
-            <button 
-              onClick={updateServiceWorker}
-              className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium"
-            >
-              Mettre à jour
-            </button>
-          </div>
-        )}
-        
-        {/* Debug button for clearing cache (only in development) */}
-        {import.meta.env.DEV && !isStackBlitz && (
-          <button 
-            onClick={clearCache}
-            className="fixed bottom-20 right-6 z-50 bg-gray-800 text-white px-3 py-2 rounded-lg text-sm"
-          >
-            Effacer le cache
-          </button>
-        )}
-        
         <Routes>
           {/* Routes publiques avec Navbar et Footer */}
           <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
@@ -213,6 +112,9 @@ function App() {
             <Route path="referral" element={<ReferralDashboard />} />
             <Route path="verify-payment/:id" element={<VerifyPayment />} />
             <Route path="payment-verification" element={<PaymentVerification />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="referral-performance" element={<ReferralPerformance />} />
+            <Route path="goals" element={<Goals />} />
           </Route>
 
           {/* Routes du tableau de bord administrateur */}
@@ -229,6 +131,7 @@ function App() {
             <Route path="withdrawals" element={<AdminWithdrawals />} />
             <Route path="user-activity" element={<UserActivity />} />
             <Route path="user-tracking" element={<UserTracking />} />
+            <Route path="notifications" element={<AdminNotifications />} />
           </Route>
         </Routes>
         <Toaster position="top-right" />

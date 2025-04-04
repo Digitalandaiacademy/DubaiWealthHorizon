@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info",
+  "Access-Control-Max-Age": "86400",
 };
 
 interface PaymentVerificationRequest {
@@ -18,18 +19,34 @@ Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      status: 200,
+      status: 204, // Use 204 for OPTIONS requests
       headers: corsHeaders,
     });
   }
 
   try {
+    // Validate request method
+    if (req.method !== "POST") {
+      throw new Error("Method not allowed");
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
     const { payment_id, transaction_id, user_id, plan_id, amount }: PaymentVerificationRequest = await req.json();
+
+    // Validate required fields
+    if (!payment_id || !transaction_id || !user_id || !plan_id || !amount) {
+      throw new Error("Missing required fields");
+    }
 
     // Call the SQL function using RPC
     const { data, error } = await supabase.rpc(
@@ -57,6 +74,8 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
+    console.error("Function error:", error.message);
+    
     return new Response(
       JSON.stringify({
         success: false,
@@ -67,7 +86,7 @@ Deno.serve(async (req: Request) => {
           ...corsHeaders,
           "Content-Type": "application/json",
         },
-        status: 400,
+        status: error.message === "Method not allowed" ? 405 : 400,
       }
     );
   }

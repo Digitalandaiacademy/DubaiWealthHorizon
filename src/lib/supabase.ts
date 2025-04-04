@@ -7,6 +7,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Please check your .env file.');
 }
 
+// Network status tracking
+let isOnline = navigator.onLine;
+let lastNetworkCheck = Date.now();
+const NETWORK_CHECK_INTERVAL = 30000; // 30 seconds
+
+// Check network connectivity
+const checkNetwork = async () => {
+  try {
+    const response = await fetch(supabaseUrl, {
+      method: 'HEAD',
+      cache: 'no-store'
+    });
+    isOnline = response.ok;
+    lastNetworkCheck = Date.now();
+    return isOnline;
+  } catch {
+    isOnline = false;
+    lastNetworkCheck = Date.now();
+    return false;
+  }
+};
+
 // Create a single supabase client for interacting with your database
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
@@ -20,7 +42,6 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
       'X-Client-Info': 'supabase-js-web'
     }
   },
-  // Add retries for better reliability
   db: {
     schema: 'public'
   },
@@ -39,6 +60,11 @@ const INITIAL_DELAY = 1000; // 1 second initial delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const testConnection = async (retryCount = 0) => {
+  if (!navigator.onLine) {
+    console.log('Browser is offline, waiting for connection...');
+    return;
+  }
+
   try {
     // Add initial delay to allow environment to fully initialize
     if (retryCount === 0) {
@@ -52,6 +78,7 @@ const testConnection = async (retryCount = 0) => {
     }
     
     console.log('Successfully connected to Supabase');
+    localStorage.setItem('supabase_connection_status', 'connected');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Failed to connect to Supabase (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, errorMessage);
@@ -62,7 +89,7 @@ const testConnection = async (retryCount = 0) => {
       return testConnection(retryCount + 1);
     } else {
       console.error('Failed to establish connection after maximum retries. Please check your Supabase configuration and network connection.');
-      // Don't throw error here - allow the application to continue even if initial connection test fails
+      localStorage.setItem('supabase_connection_status', 'disconnected');
     }
   }
 };
@@ -72,14 +99,52 @@ testConnection().catch(console.error);
 
 // Add a wrapper function for Supabase queries with retry logic
 export const executeQuery = async (queryFn: () => Promise<any>, retries = 3): Promise<any> => {
+  if (!navigator.onLine) {
+    throw new Error('Network is offline');
+  }
+
   try {
     return await queryFn();
   } catch (error) {
-    if (retries > 0) {
+    if (retries > 0 && navigator.onLine) {
       console.log(`Query failed, retrying... (${retries} attempts remaining)`);
       await wait(RETRY_DELAY);
       return executeQuery(queryFn, retries - 1);
     }
     throw error;
   }
+};
+
+// Cache for IP address to prevent excessive function calls
+const IP_CACHE_KEY = 'cached_ip_address';
+const IP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Add network status monitoring with reconnection attempts
+window.addEventListener('online', async () => {
+  isOnline = true;
+  console.log('Network connection restored, testing Supabase connection...');
+  await testConnection();
+});
+
+window.addEventListener('offline', () => {
+  isOnline = false;
+  console.log('Network connection lost');
+  localStorage.setItem('supabase_connection_status', 'disconnected');
+});
+
+// Export connection status check
+export const getConnectionStatus = () => ({
+  isOnline,
+  isConnected: localStorage.getItem('supabase_connection_status') === 'connected',
+  functionsAvailable: false, // Edge functions are not available in this environment
+  lastCheck: lastNetworkCheck
+});
+
+// Export function to force connection check
+export const checkConnection = async () => {
+  const networkStatus = await checkNetwork();
+  if (networkStatus) {
+    await testConnection();
+  }
+  return getConnectionStatus();
 };

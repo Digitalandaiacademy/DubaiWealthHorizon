@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
+import NetworkStatusIndicator from './components/NetworkStatusIndicator.tsx';
 
 // Register a function to handle network status changes
 const updateNetworkStatus = () => {
@@ -13,23 +15,6 @@ const updateNetworkStatus = () => {
   } else {
     console.log('Application is online. Using network resources.');
   }
-  
-  // Show connection status indicator
-  const statusElement = document.createElement('div');
-  statusElement.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-  statusElement.textContent = isOnline ? 'Connecté' : 'Hors ligne';
-  
-  // Remove any existing status indicators
-  document.querySelectorAll('.connection-status').forEach(el => el.remove());
-  
-  // Add the new indicator
-  document.body.appendChild(statusElement);
-  
-  // Remove the indicator after 3 seconds
-  setTimeout(() => {
-    statusElement.style.opacity = '0';
-    setTimeout(() => statusElement.remove(), 300);
-  }, 3000);
 };
 
 // Initial check
@@ -47,6 +32,7 @@ window.addEventListener('unhandledrejection', (event) => {
   if (event.reason instanceof TypeError && 
       event.reason.message.includes('Failed to fetch')) {
     console.log('Network error detected. Check your connection.');
+    event.preventDefault(); // Prevent the error from bubbling up
   }
 });
 
@@ -64,6 +50,9 @@ window.addEventListener('error', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+      <NetworkStatusIndicator />
+    </ErrorBoundary>
   </StrictMode>
 );
