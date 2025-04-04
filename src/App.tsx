@@ -42,34 +42,137 @@ import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import UserActivity from './pages/admin/UserActivity';
 import UserTracking from './pages/admin/UserTracking';
 import ResetPassword from './pages/ResetPassword';
+import toast from 'react-hot-toast';
 
 function App() {
   const { initialize, profile } = useAuthStore();
   const [isServiceWorkerRegistered, setIsServiceWorkerRegistered] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
     initialize();
 
-    // Enregistrement du service worker
+    // Register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
           .then(registration => {
-            console.log('Service Worker enregistré avec succès:', registration);
+            console.log('Service Worker registered successfully:', registration);
             setIsServiceWorkerRegistered(true);
+            setServiceWorkerRegistration(registration);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    setUpdateAvailable(true);
+                  }
+                });
+              }
+            });
           })
           .catch(error => {
-            console.log('Erreur lors de l\'enregistrement du Service Worker:', error);
+            console.error('Service Worker registration failed:', error);
           });
+        
+        // Handle controller change (when a new service worker takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('New service worker controller, page will reload');
+          // Wait a moment before reloading to ensure the new service worker is fully active
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        });
       });
     }
+    
+    // Check for app version changes
+    const appVersion = localStorage.getItem('app_version');
+    const currentVersion = '1.0.1'; // Update this when deploying new versions
+    
+    if (appVersion !== currentVersion) {
+      // Clear cache and reload if version changed
+      if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            caches.delete(cacheName);
+          });
+        });
+      }
+      
+      localStorage.setItem('app_version', currentVersion);
+      
+      // Only show update message if not first visit
+      if (appVersion) {
+        toast.success('Application mise à jour avec succès !', {
+          duration: 3000,
+          position: 'top-center',
+          icon: '🚀'
+        });
+      }
+    }
   }, []);
+
+  // Function to update the service worker
+  const updateServiceWorker = () => {
+    if (serviceWorkerRegistration && serviceWorkerRegistration.waiting) {
+      // Send message to service worker to skip waiting
+      serviceWorkerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      setUpdateAvailable(false);
+    }
+  };
+
+  // Function to clear cache manually
+  const clearCache = () => {
+    if (serviceWorkerRegistration) {
+      navigator.serviceWorker.controller?.postMessage({
+        type: 'CLEAR_CACHE'
+      }, [new MessageChannel().port2]);
+      
+      toast.success('Cache effacé avec succès !', {
+        duration: 2000,
+        position: 'top-center'
+      });
+      
+      // Reload after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  };
 
   return (
     <Router>
       <SessionTracker />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
         <InstallPWA />
+        
+        {/* Update notification */}
+        {updateAvailable && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center">
+            <span className="mr-2">Nouvelle version disponible !</span>
+            <button 
+              onClick={updateServiceWorker}
+              className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium"
+            >
+              Mettre à jour
+            </button>
+          </div>
+        )}
+        
+        {/* Debug button for clearing cache (only in development) */}
+        {import.meta.env.DEV && (
+          <button 
+            onClick={clearCache}
+            className="fixed bottom-20 right-6 z-50 bg-gray-800 text-white px-3 py-2 rounded-lg text-sm"
+          >
+            Effacer le cache
+          </button>
+        )}
+        
         <Routes>
           {/* Routes publiques avec Navbar et Footer */}
           <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />

@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Offline mode indicator */
+.offline-mode::before {
+  content: "Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #f97316;
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  z-index: 9999;
+  font-size: 0.875rem;
+}
+
+/* Add some animation for page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.page-transition {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Improve mobile experience */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  /* Prevent horizontal scrolling on mobile */
+  body {
+    position: relative;
+    width: 100%;
+  }
+  
+  /* Make tables responsive */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Improve tap targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

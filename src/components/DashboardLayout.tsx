@@ -13,13 +13,16 @@ import {
   UserCircle,
   ArrowDownCircle,
   Shield,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import NotificationDropdown from './NotificationDropdown';
+import CacheManager from './CacheManager';
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [showCacheManager, setShowCacheManager] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuthStore();
@@ -52,10 +55,29 @@ const DashboardLayout = () => {
     }
   };
 
-  // Fermer le menu mobile quand on change de route
+  // Close mobile menu when route changes
   React.useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
+
+  // Handle manual cache clearing
+  const handleClearCache = () => {
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.delete(cacheName);
+        });
+      });
+    }
+    
+    // Store last update time
+    localStorage.setItem('last_cache_update', new Date().toISOString());
+    
+    // Hide cache manager after use
+    setTimeout(() => {
+      setShowCacheManager(false);
+    }, 3000);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -207,30 +229,27 @@ const DashboardLayout = () => {
                 Déconnexion
               </button>
 
-              {/* Recharge Button */}
+              {/* Refresh Button */}
               <div className="flex flex-col items-center">
                 <button 
-                  onClick={() => window.location.reload()} 
+                  onClick={() => setShowCacheManager(true)} 
                   className="p-2 rounded-lg hover:bg-gray-100"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                    <path d="M21 3v5h-5"></path>
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                    <path d="M8 16H3v5"></path>
-                  </svg>
+                  <RefreshCw className="h-5 w-5 text-gray-600" />
                 </button>
-                <span className="text-sm text-gray-600">Rechargez la page</span>
+                <span className="text-xs text-gray-500">Actualiser</span>
               </div>
             </div>
           </div>
         </header>
 
-
         {/* Main content */}
         <main className="flex-1 p-6">
           <Outlet />
         </main>
+        
+        {/* Cache Manager */}
+        {showCacheManager && <CacheManager onClearCache={handleClearCache} />}
       </div>
     </div>
   );

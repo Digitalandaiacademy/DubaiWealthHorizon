@@ -6,6 +6,9 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "scope": "/",
+  "version": "1.0.1",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -19,5 +22,24 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
+      "description": "Accéder à votre tableau de bord",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Investissements",
+      "short_name": "Investir",
+      "description": "Voir vos investissements",
+      "url": "/dashboard/investments",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "categories": ["finance", "investment"]
 }
