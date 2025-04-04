@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import InstallPWA from './components/InstallPWA';
 import SessionTracker from './components/SessionTracker';
+import NetworkDetector from './components/NetworkDetector';
 import PublicLayout from './components/PublicLayout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -47,10 +48,13 @@ import Analytics from './pages/dashboard/Analytics';
 import ReferralPerformance from './pages/dashboard/ReferralPerformance';
 import Goals from './pages/dashboard/Goals';
 import toast from 'react-hot-toast';
+import NetworkStatusIndicator from './components/NetworkStatusIndicator';
+import CacheManager from './components/CacheManager';
 
 function App() {
   const { initialize, profile } = useAuthStore();
   const [isStackBlitz, setIsStackBlitz] = useState(false);
+  const [showCacheManager, setShowCacheManager] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -79,6 +83,7 @@ function App() {
   return (
     <Router>
       <SessionTracker />
+      <NetworkDetector />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
         {!isStackBlitz && <InstallPWA />}
         <Routes>
@@ -135,6 +140,8 @@ function App() {
           </Route>
         </Routes>
         <Toaster position="top-right" />
+        <NetworkStatusIndicator />
+        {showCacheManager && <CacheManager onClearCache={() => setShowCacheManager(false)} />}
       </div>
     </Router>
   );
