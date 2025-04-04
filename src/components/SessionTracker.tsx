@@ -19,19 +19,24 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
             device: getDeviceInfo(userAgent)
           };
 
-          // Get location info
+          // Get location info with error handling
           const locationInfo = await getLocationInfo();
 
           // Check for existing session for this user and get the most recent one
-          const { data: existingSessions } = await supabase
+          const { data: existingSessions, error: sessionError } = await supabase
             .from('user_sessions')
             .select('*')
             .eq('user_id', user.id)
             .order('last_active', { ascending: false });
 
+          if (sessionError) {
+            console.error('Error fetching sessions:', sessionError);
+            return;
+          }
+
           if (existingSessions && existingSessions.length > 0) {
-            // Update existing session
-            await supabase
+            // Update existing session with error handling
+            const { error: updateError } = await supabase
               .from('user_sessions')
               .update({
                 device_info: deviceInfo,
@@ -40,9 +45,13 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
                 last_active: new Date().toISOString()
               })
               .eq('id', existingSessions[0].id);
+
+            if (updateError) {
+              console.error('Error updating session:', updateError);
+            }
           } else {
-            // Create new session
-            await supabase
+            // Create new session with error handling
+            const { error: insertError } = await supabase
               .from('user_sessions')
               .insert({
                 user_id: user.id,
@@ -52,22 +61,28 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
                 session_start: new Date().toISOString(),
                 last_active: new Date().toISOString()
               });
+
+            if (insertError) {
+              console.error('Error creating session:', insertError);
+            }
           }
 
           // Load and send updated sessions data
           if (onSessionUpdate) {
-            const { data: updatedSessions } = await supabase
+            const { data: updatedSessions, error: loadError } = await supabase
               .from('user_sessions')
               .select('*')
               .order('last_active', { ascending: false });
 
-            if (updatedSessions) {
+            if (loadError) {
+              console.error('Error loading updated sessions:', loadError);
+            } else if (updatedSessions) {
               onSessionUpdate(updatedSessions);
             }
           }
         }
       } catch (error) {
-        console.error('Error updating session:', error);
+        console.error('Error in session tracking:', error);
       }
     };
 
@@ -88,13 +103,19 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
         async () => {
           // Reload all sessions on change
           if (onSessionUpdate) {
-            const { data } = await supabase
-              .from('user_sessions')
-              .select('*')
-              .order('last_active', { ascending: false });
+            try {
+              const { data, error } = await supabase
+                .from('user_sessions')
+                .select('*')
+                .order('last_active', { ascending: false });
 
-            if (data) {
-              onSessionUpdate(data);
+              if (error) {
+                console.error('Error loading sessions after change:', error);
+              } else if (data) {
+                onSessionUpdate(data);
+              }
+            } catch (error) {
+              console.error('Error in realtime update:', error);
             }
           }
         }
@@ -103,21 +124,34 @@ const SessionTracker = ({ onSessionUpdate }: SessionTrackerProps) => {
 
     // Mark user as offline when page closes
     const handleBeforeUnload = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: sessions } = await supabase
-          .from('user_sessions')
-          .select('id')
-          .eq('user_id', user.id)
-          .order('last_active', { ascending: false })
-          .limit(1);
-          
-        if (sessions && sessions.length > 0) {
-          await supabase
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: sessions, error: sessionError } = await supabase
             .from('user_sessions')
-            .update({ is_online: false })
-            .eq('id', sessions[0].id);
+            .select('id')
+            .eq('user_id', user.id)
+            .order('last_active', { ascending: false })
+            .limit(1);
+            
+          if (sessionError) {
+            console.error('Error fetching session for offline status:', sessionError);
+            return;
+          }
+
+          if (sessions && sessions.length > 0) {
+            const { error: updateError } = await supabase
+              .from('user_sessions')
+              .update({ is_online: false })
+              .eq('id', sessions[0].id);
+
+            if (updateError) {
+              console.error('Error updating offline status:', updateError);
+            }
+          }
         }
+      } catch (error) {
+        console.error('Error in beforeunload handler:', error);
       }
     };
 
@@ -175,6 +209,9 @@ const getDeviceInfo = (userAgent: string): string => {
 const getLocationInfo = async () => {
   try {
     const response = await fetch('https://ipapi.co/json/');
+    if (!response.ok) {
+      throw new Error('Location service unavailable');
+    }
     const data = await response.json();
     return {
       country: data.country_name || 'Unknown',

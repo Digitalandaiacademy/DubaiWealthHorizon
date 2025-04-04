@@ -46,47 +46,56 @@ import toast from 'react-hot-toast';
 
 function App() {
   const { initialize, profile } = useAuthStore();
-  const [isServiceWorkerRegistered, setIsServiceWorkerRegistered] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<ServiceWorkerRegistration | null>(null);
+
+  // Check if running in StackBlitz
+  const isStackBlitz = window.location.hostname.includes('stackblitz') || 
+                      window.navigator.userAgent.includes('StackBlitz');
 
   useEffect(() => {
     initialize();
 
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('Service Worker registered successfully:', registration);
-            setIsServiceWorkerRegistered(true);
-            setServiceWorkerRegistration(registration);
-            
-            // Check for updates
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    setUpdateAvailable(true);
-                  }
-                });
+    // Register service worker only if not in StackBlitz and browser supports it
+    if ('serviceWorker' in navigator && !isStackBlitz) {
+      try {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered successfully:', registration);
+              setServiceWorkerRegistration(registration);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      setUpdateAvailable(true);
+                    }
+                  });
+                }
+              });
+            })
+            .catch(error => {
+              // Don't show error toast in StackBlitz since SW is not supported
+              if (!isStackBlitz) {
+                console.error('Service Worker registration failed:', error);
               }
             });
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
+          
+          // Handle controller change (when a new service worker takes over)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('New service worker controller, page will reload');
+            // Wait a moment before reloading to ensure the new service worker is fully active
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           });
-        
-        // Handle controller change (when a new service worker takes over)
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('New service worker controller, page will reload');
-          // Wait a moment before reloading to ensure the new service worker is fully active
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
         });
-      });
+      } catch (error) {
+        console.error('Error setting up service worker:', error);
+      }
     }
     
     // Check for app version changes
@@ -148,10 +157,10 @@ function App() {
     <Router>
       <SessionTracker />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
-        <InstallPWA />
+        {!isStackBlitz && <InstallPWA />}
         
         {/* Update notification */}
-        {updateAvailable && (
+        {updateAvailable && !isStackBlitz && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center">
             <span className="mr-2">Nouvelle version disponible !</span>
             <button 
@@ -164,7 +173,7 @@ function App() {
         )}
         
         {/* Debug button for clearing cache (only in development) */}
-        {import.meta.env.DEV && (
+        {import.meta.env.DEV && !isStackBlitz && (
           <button 
             onClick={clearCache}
             className="fixed bottom-20 right-6 z-50 bg-gray-800 text-white px-3 py-2 rounded-lg text-sm"
