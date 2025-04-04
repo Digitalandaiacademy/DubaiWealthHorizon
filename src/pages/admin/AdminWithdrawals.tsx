@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useTransactionStore } from '../../store/transactionStore';
-import { useAuthStore } from '../../store/authStore';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -22,16 +19,18 @@ interface Transaction {
     paymentMethod?: string;
     paymentCategory?: string;
   };
-  user?: {
+  profiles?: {
     full_name: string;
     email: string;
-    created_at: string;
-  } | null;
+  };
 }
 
 interface GroupedWithdrawals {
   [key: string]: {
-    user: Transaction['user'];
+    user: {
+      full_name: string;
+      email: string;
+    };
     withdrawals: Transaction[];
     totalAmount: number;
     pendingAmount: number;
@@ -41,37 +40,63 @@ interface GroupedWithdrawals {
 }
 
 const AdminWithdrawals = () => {
-  const { transactions, loadTransactions, loading, newPendingWithdrawals, acknowledgeNewWithdrawals } = useTransactionStore();
+  const [withdrawals, setWithdrawals] = useState<Transaction[]>([]);
   const [groupedWithdrawals, setGroupedWithdrawals] = useState<GroupedWithdrawals>({});
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTransactions();
-    useTransactionStore.getState().startAutoUpdate();
-    return () => {
-      useTransactionStore.getState().stopAutoUpdate();
-    };
-  }, []); // S'exécute une seule fois au montage
+  const loadWithdrawals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Récupérer les retraits avec les informations utilisateur
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          )
+        `)
+        .in('type', ['withdrawal', 'commission_withdrawal'])
+        .order('created_at', { ascending: false });
 
-  useEffect(() => {
-    if (transactions.length > 0) {
-      const withdrawalTransactions = transactions.filter(
-        t => t.type === 'withdrawal' || t.type === 'commission_withdrawal'
-      );
-      groupWithdrawalsByUser(withdrawalTransactions);
+      if (error) {
+        console.error('Error loading withdrawals:', error);
+        setError(error.message);
+        throw error;
+      }
+
+      console.log('Withdrawals loaded:', data?.length || 0);
+      setWithdrawals(data || []);
+      
+      // Grouper les retraits par utilisateur
+      groupWithdrawalsByUser(data || []);
+    } catch (error: any) {
+      console.error('Error in loadWithdrawals:', error);
+      toast.error('Erreur lors du chargement des retraits: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-  }, [transactions]);
+  };
 
   const groupWithdrawalsByUser = (withdrawalsList: Transaction[]) => {
     const grouped = withdrawalsList.reduce((acc: GroupedWithdrawals, withdrawal) => {
       const userId = withdrawal.user_id;
+      
       if (!acc[userId]) {
         acc[userId] = {
-          user: withdrawal.user,
+          user: {
+            full_name: withdrawal.profiles?.full_name || 'Utilisateur inconnu',
+            email: withdrawal.profiles?.email || 'Email inconnu'
+          },
           withdrawals: [],
           totalAmount: 0,
           pendingAmount: 0,
@@ -79,31 +104,61 @@ const AdminWithdrawals = () => {
           totalCount: 0
         };
       }
+      
       acc[userId].withdrawals.push(withdrawal);
       acc[userId].totalAmount += withdrawal.amount;
+      
       if (withdrawal.status === 'pending') {
         acc[userId].pendingAmount += withdrawal.amount;
       }
+      
       if (withdrawal.status === 'completed') {
         acc[userId].completedCount += 1;
       }
+      
       acc[userId].totalCount += 1;
+      
       return acc;
     }, {});
 
+    console.log('Grouped withdrawals:', Object.keys(grouped).length);
     setGroupedWithdrawals(grouped);
   };
 
-  const handleStatusChange = async (withdrawalId: string, status: 'completed' | 'rejected') => {
+  const updateWithdrawalStatus = async (id: string, status: 'completed' | 'rejected') => {
     try {
-      await useTransactionStore.getState().updateWithdrawalStatus(withdrawalId, status);
-      await loadTransactions(); // Recharger toutes les transactions
-      toast.success(`Retrait ${status === 'completed' ? 'validé' : 'rejeté'} avec succès`);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
-      toast.error('Une erreur est survenue lors de la mise à jour du statut');
+      setLoading(true);
+      
+      // Mise à jour du statut
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({ status })
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error('Error updating withdrawal:', error);
+        throw error;
+      }
+
+      toast.success(`Retrait ${status === 'completed' ? 'validé' : 'refusé'} avec succès`);
+      
+      // Recharger les retraits
+      await loadWithdrawals();
+    } catch (error: any) {
+      console.error('Error in updateWithdrawalStatus:', error);
+      toast.error('Erreur lors de la mise à jour: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadWithdrawals();
+    // Mettre à jour toutes les 30 secondes
+    const interval = setInterval(loadWithdrawals, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleUserExpansion = (userId: string) => {
     const newExpandedUsers = new Set(expandedUsers);
@@ -165,6 +220,13 @@ const AdminWithdrawals = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gestion des Retraits</h2>
+        <button
+          onClick={loadWithdrawals}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Actualiser
+        </button>
       </div>
 
       {/* Statistiques rapides */}
@@ -228,11 +290,39 @@ const AdminWithdrawals = () => {
         </button>
       </div>
 
-      {loading ? (
+      {loading && (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
         </div>
-      ) : (
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            <p className="font-medium">Erreur lors du chargement des retraits</p>
+          </div>
+          <p className="mt-2 text-sm">{error}</p>
+          <button 
+            onClick={loadWithdrawals}
+            className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && filteredGroupedWithdrawals.length === 0 && (
+        <div className="text-center py-8">
+          <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun retrait trouvé</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Aucun retrait ne correspond à vos critères de recherche.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && filteredGroupedWithdrawals.length > 0 && (
         <div className="space-y-4">
           {filteredGroupedWithdrawals.map(([userId, data]) => (
             <div key={userId} className="bg-white rounded-lg shadow overflow-hidden">
@@ -269,7 +359,7 @@ const AdminWithdrawals = () => {
                     <div>
                       <p className="text-sm text-gray-500">Taux de succès</p>
                       <p className="font-semibold text-green-600">
-                        {((data.completedCount / data.totalCount) * 100).toFixed(0)}%
+                        {data.totalCount > 0 ? ((data.completedCount / data.totalCount) * 100).toFixed(0) : 0}%
                       </p>
                     </div>
                     <div>
@@ -315,19 +405,16 @@ const AdminWithdrawals = () => {
                         .map((withdrawal) => (
                           <tr 
                             key={withdrawal.id} 
-                            className={`hover:bg-gray-50 ${
-                              newPendingWithdrawals.some(w => w.id === withdrawal.id)
-                                ? 'bg-yellow-50 animate-pulse'
-                                : ''
-                            }`}
-                            onClick={() => {
-                              if (newPendingWithdrawals.some(w => w.id === withdrawal.id)) {
-                                acknowledgeNewWithdrawals();
-                              }
-                            }}
+                            className="hover:bg-gray-50"
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {format(new Date(withdrawal.created_at), 'PPP HH:mm', { locale: fr })}
+                              {new Date(withdrawal.created_at).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {withdrawal.amount.toLocaleString()} FCFA
@@ -364,14 +451,14 @@ const AdminWithdrawals = () => {
                               {withdrawal.status === 'pending' && (
                                 <div className="flex flex-col space-y-2">
                                   <button
-                                    onClick={() => handleStatusChange(withdrawal.id, 'completed')}
+                                    onClick={() => updateWithdrawalStatus(withdrawal.id, 'completed')}
                                     disabled={loading}
                                     className="text-green-600 hover:text-green-900 bg-green-50 px-3 py-1 rounded"
                                   >
                                     ✅ Valider
                                   </button>
                                   <button
-                                    onClick={() => handleStatusChange(withdrawal.id, 'rejected')}
+                                    onClick={() => updateWithdrawalStatus(withdrawal.id, 'rejected')}
                                     disabled={loading}
                                     className="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded"
                                   >
