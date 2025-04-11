@@ -312,6 +312,7 @@ const Dashboard = () => {
         </div>
       </div>
       
+      {/* Support button with slide-up WhatsApp and Telegram options */}
       <div className="fixed bottom-6 right-6 flex flex-col items-center space-y-2 z-50">
       {/* Boutons WhatsApp & Telegram */}
       <div className={`flex flex-col items-center space-y-2 transition-all duration-300 ease-in-out ${showSupport ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>

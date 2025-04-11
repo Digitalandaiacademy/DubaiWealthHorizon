@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; // Ajout de useState
 import { useInvestmentStore } from '../../store/investmentStore';
 import { TrendingUp, AlertCircle, Calendar, DollarSign, Percent, Clock, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import InvestmentAnimation from '../../components/InvestmentAnimation';
 
 const Investments = () => {
+  const [showSupport, setShowSupport] = useState(false); // Ajout de l'état showSupport
   const { userInvestments, plans, loadUserInvestments, loadPlans, loading } = useInvestmentStore();
 
   useEffect(() => {
@@ -15,7 +16,7 @@ const Investments = () => {
   const activeInvestments = userInvestments.filter(inv => inv.status === 'active');
 
   // Calculate earnings correctly based on cycle days
-  const calculateEarnings = (investment) => {
+  const calculateEarnings = (investment: { created_at: string; amount: number; plan: { daily_roi: number; }; cycle_days: number; }) => {
     const startDate = new Date(investment.created_at);
     const currentDate = new Date();
     const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
@@ -255,23 +256,55 @@ const Investments = () => {
         </div>
       </div>
       
-      {/* WhatsApp assistance button */}
-      <div className="fixed bottom-6 right-6 flex flex-col items-center space-y-2">
-        <span className="text-gray-700 text-sm bg-white px-2 py-1 rounded-md shadow-md">
-          Besoin d'aide ?
-        </span>
+      {/* Support button with slide-up WhatsApp and Telegram options */}
+      <div className="fixed bottom-6 right-6 flex flex-col items-center space-y-2 z-50">
+      {/* Boutons WhatsApp & Telegram */}
+      <div className={`flex flex-col items-center space-y-2 transition-all duration-300 ease-in-out ${showSupport ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
         <a 
           href="https://wa.me/2348062450400?text=Besoin%20d'assistance" 
           target="_blank" 
           rel="noopener noreferrer"
           className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* WhatsApp Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21.5 12.3a9.8 9.8 0 0 1-1.1 4.5c-.7 1.5-2.2 3.3-3.7 4.2a10.2 10.2 0 0 1-4.5 1.1 9.8 9.8 0 0 1-4.5-1.1L2 22l1.1-5.3a9.8 9.8 0 0 1-1.1-4.5 10.2 10.2 0 0 1 1.1-4.5 9.8 9.8 0 0 1 4.5-3.7 10.2 10.2 0 0 1 4.5-1.1h.5a9.8 9.8 0 0 1 4.5 1.1 10.2 10.2 0 0 1 3.7 3.7 9.8 9.8 0 0 1 1.1 4.5z"/>
             <path d="M16.2 14.7c-.3 1-1.6 1.6-2.7 1.2-1.2-.5-4.3-2.6-5.4-5.5-.4-1 .1-2.4 1.2-2.7.6-.2 1.3 0 1.7.6l.8 1.2c.3.4.3.9 0 1.3l-.6.8c.5 1.1 1.3 1.9 2.4 2.4l.8-.6c.4-.3.9-.3 1.3 0l1.2.8c.6.4.8 1.1.6 1.7z"/>
           </svg>
         </a>
+
+        <a 
+          href="https://t.me/dubaiwealthhorizon_support" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition"
+        >
+          {/* Telegram Icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 2L11 13" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+          </svg>
+        </a>
       </div>
+
+      {/* Texte d'aide — affiché seulement quand les boutons ne sont pas visibles */}
+      {!showSupport && (
+        <span className="text-gray-700 text-sm bg-white px-2 py-1 rounded-md shadow-md mb-1">
+          Besoin d'aide ?
+        </span>
+      )}
+
+      {/* Bouton principal de support */}
+      <button
+        onClick={() => setShowSupport(!showSupport)}
+        className="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center shadow-2xl hover:bg-gray-700 transition"
+      >
+        {/* Icône support (casque) */}
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13v-2a9 9 0 0118 0v2M21 13a3 3 0 01-6 0v-2a3 3 0 016 0v2zM3 13a3 3 0 006 0v-2a3 3 0 00-6 0v2z" />
+        </svg>
+      </button>
+    </div>
     </div>
   );
 };
