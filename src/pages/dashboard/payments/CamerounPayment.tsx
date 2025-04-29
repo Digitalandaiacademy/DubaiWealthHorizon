@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { ArrowLeft, Phone, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient';
+import { sendPaymentNotificationEmail } from '../../../services/emailService';
 
 const CamerounPayment = () => {
   const navigate = useNavigate();
@@ -80,6 +81,21 @@ const CamerounPayment = () => {
       if (error) {
         console.error('Erreur Supabase:', error);
         throw error;
+      }
+
+      // Envoyer l'email de notification à l'administrateur
+      try {
+        await sendPaymentNotificationEmail({
+          userFullName: fullName,
+          userEmail: profile?.email || '',
+          amount: amount,
+          paymentMethod: paymentInfo.payment_method,
+          transactionId: generatedTransactionId,
+          planName: selectedPlan?.name || ''
+        });
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+        // Ne pas bloquer le processus si l'email échoue
       }
 
       console.log('Réponse Supabase:', data);
