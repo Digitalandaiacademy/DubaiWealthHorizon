@@ -36,6 +36,15 @@ interface PaymentVerification {
   user_id: string;
   amount: number;
   payment_method: string;
+  payment_country?: string;
+  payer_phone?: string;
+  payer_name?: string;
+  payment_details?: {
+    provider?: string;
+    phone_number?: string;
+    full_name?: string;
+    ussd_code?: string;
+  };
   status: string;
   created_at: string;
   verified_at: string | null;
@@ -308,6 +317,62 @@ const AdminPayments = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const renderPaymentDetails = (payment: PaymentVerification) => {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h4 className="font-medium text-gray-700">Détails du plan</h4>
+            <p>Nom : {payment.investment_plans.name}</p>
+            <p>Prix : {payment.amount.toLocaleString()} FCFA</p>
+            <p>ROI journalier : {payment.investment_plans.daily_roi}%</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-gray-700">Détails de l'investisseur</h4>
+            <p>Nom : {payment.profiles.full_name}</p>
+            <p>Email : {payment.profiles.email}</p>
+            <p>Téléphone : {payment.profiles.phone_number}</p>
+          </div>
+        </div>
+
+        {payment.payment_country === 'cameroun' && (
+          <div className="bg-blue-50 p-4 rounded-lg mt-4">
+            <h4 className="font-medium text-blue-800 mb-2">Informations de paiement au Cameroun</h4>
+            <div className="grid grid-cols-2 gap-4 text-blue-700">
+              <div>
+                <p>Pays : Cameroun</p>
+                <p>Méthode : {payment.payment_details?.provider}</p>
+                <p>Code USSD : {payment.payment_details?.ussd_code}</p>
+              </div>
+              <div>
+                <p>Nom du payeur : {payment.payer_name}</p>
+                <p>Téléphone du payeur : {payment.payer_phone}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <h4 className="font-medium text-gray-700">Statut du paiement</h4>
+          <div className="flex items-center space-x-2">
+            <span className={`px-2 py-1 rounded-full text-sm ${
+              payment.status === 'verified' ? 'bg-green-100 text-green-800' :
+              payment.status === 'rejected' ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }`}>
+              {payment.status === 'verified' ? 'Vérifié' :
+               payment.status === 'rejected' ? 'Rejeté' :
+               'En attente'}
+            </span>
+            <span className="text-gray-500">
+              {new Date(payment.created_at).toLocaleString('fr-FR')}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -627,54 +692,7 @@ const AdminPayments = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-sm text-gray-500">Utilisateur</p>
-                <p className="font-medium">{selectedPayment.profiles.full_name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium">{selectedPayment.profiles.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Montant</p>
-                <p className="font-medium">{selectedPayment.amount.toLocaleString('fr-FR')} FCFA</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Méthode</p>
-                <p className="font-medium">{selectedPayment.payment_method}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Transaction ID</p>
-                <p className="font-medium">{selectedPayment.transaction_id}</p>
-              </div>
-              {selectedPayment.verified_transaction_id && (
-                <div>
-                  <p className="text-sm text-gray-500">ID de Transaction Fourni</p>
-                  <p className="font-medium">{selectedPayment.verified_transaction_id}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-gray-500">Date</p>
-                <p className="font-medium">
-                  {new Date(selectedPayment.created_at).toLocaleString('fr-FR')}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                  ${selectedPayment.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : selectedPayment.status === 'verified'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {selectedPayment.status === 'pending' ? 'En attente' :
-                   selectedPayment.status === 'verified' ? 'ID Fourni' : 'Rejeté'}
-                </span>
-              </div>
-            </div>
+            {renderPaymentDetails(selectedPayment)}
 
             {selectedPayment.status === 'pending' && (
               <div className="space-y-4">

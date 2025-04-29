@@ -57,7 +57,7 @@ const Investments = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Mes Investissements</h1>
         <Link
-          to="/dashboard/invest"
+          to="/dashboard/select-payment-country"
           className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors"
         >
           <span className="flex items-center">
@@ -106,7 +106,7 @@ const Investments = () => {
               </p>
               <div className="mt-6">
                 <Link
-                  to="/dashboard/invest"
+                  to="/dashboard/select-payment-country"
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <TrendingUp className="-ml-1 mr-2 h-5 w-5" />
@@ -245,7 +245,7 @@ const Investments = () => {
                   </p>
                 </div>
                 <Link
-                  to={`/dashboard/invest?plan=${plan.id}`}
+                  to={`/dashboard/select-payment-country?plan=${plan.id}`}
                   className="block w-full text-center bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
                   Choisir ce plan

@@ -50,6 +50,11 @@ import Goals from './pages/dashboard/Goals';
 import toast from 'react-hot-toast';
 import NetworkStatusIndicator from './components/NetworkStatusIndicator';
 import CacheManager from './components/CacheManager';
+import SelectPaymentCountry from './pages/dashboard/SelectPaymentCountry';
+import CamerounPayment from './pages/dashboard/payments/CamerounPayment';
+import KenyaPayment from './pages/dashboard/payments/KenyaPayment';
+import SenegalPayment from './pages/dashboard/payments/SenegalPayment';
+import BeninPayment from './pages/dashboard/payments/BeninPayment';
 
 function App() {
   const { initialize, profile } = useAuthStore();
@@ -110,7 +115,12 @@ function App() {
           <Route path="/dashboard" element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="investments" element={<Investments />} />
-            <Route path="invest" element={<NewInvestment />} />
+            <Route path="new-investment" element={<NewInvestment />} />
+            <Route path="select-payment-country" element={<SelectPaymentCountry />} />
+            <Route path="payment/cameroun" element={<CamerounPayment />} />
+            <Route path="payment/kenya" element={<KenyaPayment />} />
+            <Route path="payment/senegal" element={<SenegalPayment />} />
+            <Route path="payment/benin" element={<BeninPayment />} />
             <Route path="transactions" element={<Transactions />} />
             <Route path="profile" element={<Profile />} />
             <Route path="withdrawals" element={<Withdrawals />} />
