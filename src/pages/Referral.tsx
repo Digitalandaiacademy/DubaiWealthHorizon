@@ -34,19 +34,19 @@ const Referral = () => {
           {[
             {
               level: "Niveau 1",
-              commission: "5%",
+              commission: "10%",
               description: "Commission directe sur les investissements de vos filleuls",
               icon: <Users className="h-12 w-12 text-blue-600" />
             },
             {
               level: "Niveau 2",
-              commission: "2%",
+              commission: "5%",
               description: "Commission sur les investissements des filleuls de vos filleuls",
               icon: <Gift className="h-12 w-12 text-blue-600" />
             },
             {
               level: "Niveau 3",
-              commission: "1%",
+              commission: "2%",
               description: "Commission sur les investissements du troisième niveau",
               icon: <Award className="h-12 w-12 text-blue-600" />
             }

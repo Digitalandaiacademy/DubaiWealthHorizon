@@ -60,11 +60,11 @@ interface ReferralState {
 const calculateCommission = (amount: number, level: number): number => {
   switch (level) {
     case 1:
-      return amount * 0.05; // 5% pour niveau 1
+      return amount * 0.10; // 10% pour niveau 1
     case 2:
-      return amount * 0.02; // 2% pour niveau 2
+      return amount * 0.05; // 5% pour niveau 2
     case 3:
-      return amount * 0.01; // 1% pour niveau 3
+      return amount * 0.02; // 2% pour niveau 3 (sera activé dans le futur)
     default:
       return 0;
   }
