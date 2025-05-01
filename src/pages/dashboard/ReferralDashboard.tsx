@@ -187,7 +187,7 @@ const ReferralDashboard = () => {
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {filteredReferrals.map((referral: Referral, index: number) => {
-            const commissionRate = referral.level === 1 ? '5%' : referral.level === 2 ? '2%' : '1%';
+            const commissionRate = referral.level === 1 ? '10%' : referral.level === 2 ? '5%' : '2%';
             return (
               <tr key={referral.id || index}>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -360,15 +360,15 @@ const ReferralDashboard = () => {
               <div className="space-y-1">
                 <div className="flex items-center">
                   <span className="text-sm font-semibold text-orange-600">Niveau 1:</span>
-                  <span className="ml-2 text-lg font-bold text-orange-600">5%</span>
+                  <span className="ml-2 text-lg font-bold text-orange-600">10%</span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm font-semibold text-green-600">Niveau 2:</span>
-                  <span className="ml-2 text-lg font-bold text-green-600">2%</span>
+                  <span className="ml-2 text-lg font-bold text-green-600">5%</span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-sm font-semibold text-blue-600">Niveau 3:</span>
-                  <span className="ml-2 text-lg font-bold text-blue-600">1%</span>
+                  <span className="ml-2 text-lg font-bold text-blue-600">2%</span>
                 </div>
               </div>
             </div>
@@ -433,7 +433,7 @@ const ReferralDashboard = () => {
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="text-sm text-blue-600 font-medium">Niveau 1 (5%)</div>
+              <div className="text-sm text-blue-600 font-medium">Niveau 1 (10%)</div>
               <div className="mt-1 space-y-2">
                 <div>
                   <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
@@ -454,7 +454,7 @@ const ReferralDashboard = () => {
               </div>
             </div>
             <div className="bg-green-50 p-3 rounded-lg">
-              <div className="text-sm text-green-600 font-medium">Niveau 2 (2%)</div>
+              <div className="text-sm text-green-600 font-medium">Niveau 2 (5%)</div>
               <div className="mt-1 space-y-2">
                 <div>
                   <div className="text-xs text-gray-500">Total Filleuls (Actifs)</div>
