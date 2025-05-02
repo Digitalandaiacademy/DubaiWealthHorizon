@@ -104,8 +104,8 @@ const CamerounPayment = () => {
       setCurrentStep('waiting');
       toast.success('Paiement initié avec succès');
       
-      // Déclencher l'événement de conversion Google Ads
-      trackConversion();
+      // Utiliser trackConversion avec callback de redirection
+      trackConversion('/dashboard/investments');
     } catch (error: any) {
       console.error('Erreur détaillée:', error);
       toast.error(error.message || 'Une erreur est survenue lors de l\'enregistrement du paiement');

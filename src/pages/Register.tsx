@@ -56,10 +56,9 @@ const Register = () => {
         formData.referralCode
       );
       
-      // Déclencher la conversion Google Ads après une inscription réussie
-      trackConversion();
-      
       toast.success('Compte créé avec succès');
+      // Utiliser trackConversion avec l'URL de redirection
+      trackConversion('/dashboard');
       navigate('/dashboard');
     } catch (error: any) {
       toast.error(error.message || 'Une erreur est survenue');
