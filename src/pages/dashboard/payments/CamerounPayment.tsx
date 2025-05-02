@@ -6,6 +6,7 @@ import { ArrowLeft, Phone, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient';
 import { sendPaymentNotificationEmail } from '../../../services/emailService';
+import { useGoogleAds } from '../../../hooks/useGoogleAds';
 
 const CamerounPayment = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const CamerounPayment = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [fullName, setFullName] = useState('');
   const [currentStep, setCurrentStep] = useState<'method' | 'details' | 'waiting'>('method');
+  const { trackConversion } = useGoogleAds();
 
   useEffect(() => {
     loadPlans();
@@ -101,6 +103,9 @@ const CamerounPayment = () => {
       console.log('Réponse Supabase:', data);
       setCurrentStep('waiting');
       toast.success('Paiement initié avec succès');
+      
+      // Déclencher l'événement de conversion Google Ads
+      trackConversion();
     } catch (error: any) {
       console.error('Erreur détaillée:', error);
       toast.error(error.message || 'Une erreur est survenue lors de l\'enregistrement du paiement');

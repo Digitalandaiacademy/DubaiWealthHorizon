@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { TrendingUp, DollarSign, ArrowUpCircle, ArrowDownCircle, AlertCircle, Calendar } from 'lucide-react';
 import InvestmentAnimation from '../../components/InvestmentAnimation';
 import toast from 'react-hot-toast';
+import { useGoogleAds } from '../../hooks/useGoogleAds';
 
 const Dashboard = () => {
   const { profile } = useAuthStore();
@@ -20,6 +21,7 @@ const Dashboard = () => {
     stopAutoUpdate,
     loading: transactionsLoading 
   } = useTransactionStore();
+  const { trackConversion } = useGoogleAds();
 
   const [showSupport, setShowSupport] = useState(false); // État pour gérer la visibilité du support
 
@@ -35,6 +37,13 @@ const Dashboard = () => {
     };
 
     loadData();
+    
+    // Déclencher la conversion lors de la première visite du tableau de bord
+    const hasTrackedConversion = sessionStorage.getItem('dashboard_conversion_tracked');
+    if (!hasTrackedConversion) {
+      trackConversion();
+      sessionStorage.setItem('dashboard_conversion_tracked', 'true');
+    }
     
     // Set up automatic update
     const updateInterval = setInterval(() => {

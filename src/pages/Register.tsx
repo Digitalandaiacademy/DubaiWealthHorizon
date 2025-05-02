@@ -3,11 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { useGoogleAds } from '../hooks/useGoogleAds';
 
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
   const { signUp } = useAuthStore();
+  const { trackConversion } = useGoogleAds();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -53,6 +55,10 @@ const Register = () => {
         formData.phoneNumber,
         formData.referralCode
       );
+      
+      // Déclencher la conversion Google Ads après une inscription réussie
+      trackConversion();
+      
       toast.success('Compte créé avec succès');
       navigate('/dashboard');
     } catch (error: any) {
