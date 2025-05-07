@@ -178,7 +178,7 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Investissements Actifs</h2>
             <Link
-              to="/dashboard/invest#available-plans"
+              to="/dashboard/Investments#available-plans"
               className="inline-flex items-center px-3 py-1.5 text-sm border border-transparent rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               <TrendingUp className="h-4 w-4 mr-1" />
