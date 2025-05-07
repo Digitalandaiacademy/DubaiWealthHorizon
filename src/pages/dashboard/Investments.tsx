@@ -57,7 +57,7 @@ const Investments = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Mes Investissements</h1>
         <Link
-          to="/dashboard/select-payment-country"
+          to="#available-plans"
           className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 transition-colors"
         >
           <span className="flex items-center">
@@ -226,7 +226,7 @@ const Investments = () => {
       </div>
 
       {/* Available plans - Mobile-friendly grid */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div id="available-plans" className="bg-white rounded-lg shadow-sm p-4">
         <h2 className="text-lg font-medium text-gray-900 mb-4">
           Plans d'Investissement Disponibles
         </h2>
@@ -301,7 +301,7 @@ const Investments = () => {
       >
         {/* Icône support (casque) */}
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13v-2a9 9 0 0118 0v2M21 13a3 3 0 01-6 0v-2a3 3 0 016 0v2zM3 13a3 3 0 006 0v-2a3 3 0 00-6 0v2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13v-2a9 9 0 0118 0v2M21 13a3 3 0 01-6 0v-2a3 3 0 00-6 0v2zM3 13a3 3 0 006 0v-2a3 3 0 00-6 0v2z" />
         </svg>
       </button>
     </div>
