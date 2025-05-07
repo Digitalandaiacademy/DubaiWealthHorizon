@@ -56,7 +56,7 @@ const NetworkDetector = () => {
         <div className="flex items-center mb-2 md:mb-0">
           <WifiOff className="h-5 w-5 mr-2" />
           <span className="font-medium">
-            Problème de connexion détecté avec Orange Cameroun
+            Problème de connexion détecté avec Orange? utilisez soit un VPN soit un autre Réseau
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
