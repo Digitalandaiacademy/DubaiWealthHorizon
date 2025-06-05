@@ -1,0 +1,19 @@
+Add the following debug log inside loadTransactions in src/store/transactionStore.ts after loading transactions:
+
+console.log('Referral transactions:', transactions.filter(t => t.type === 'referral' && t.status === 'completed'));
+
+This will show if referral transactions are loaded and their amounts.
+
+Also, here is a SQL query to check referral transactions for the user:
+
+SELECT id, user_id, type, amount, status, created_at
+FROM transactions
+WHERE user_id = '777adcbd-28e2-478d-885e-544022afcf55'
+  AND type = 'referral'
+ORDER BY created_at DESC;
+
+Run this query in your database to verify the referral transaction status and amount.
+
+If referral transactions are missing or not completed, the bonus won't appear in the balance.
+
+If referral transactions are present and completed, but still not showing, the issue is likely in frontend state update or caching.

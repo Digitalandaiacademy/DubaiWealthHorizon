@@ -194,6 +194,10 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
           .filter(t => t.type === 'commission_withdrawal' && t.status === 'completed')
           .reduce((sum, t) => sum + t.amount, 0);
 
+        const referralCredits = transactions
+          .filter(t => t.type === 'referral' && t.status === 'completed')
+          .reduce((sum, t) => sum + t.amount, 0);
+
         const pendingWithdrawals = transactions
           .filter(t => t.type === 'withdrawal' && t.status === 'pending')
           .reduce((sum, t) => sum + t.amount, 0);
@@ -203,7 +207,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => {
           .reduce((sum, t) => sum + t.amount, 0);
 
         const totalWithdrawn = standardWithdrawals + commissionWithdrawals;
-        const availableBalance = Math.floor(returns - standardWithdrawals - pendingWithdrawals);
+        const availableBalance = Math.floor(returns + referralCredits - standardWithdrawals - pendingWithdrawals);
 
         console.log('Transaction store calculations:', {
           returns,

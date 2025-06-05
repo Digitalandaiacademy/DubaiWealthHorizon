@@ -95,7 +95,7 @@ const ReferralDashboard = () => {
     const link = getReferralLink();
     if (link) {
       navigator.clipboard.writeText(link);
-      toast.success('Lien de parrainage copié !');
+      toast.success('Lien de parrainage copié ! N\'oubliez pas d\'informer vos filleuls qu\'ils bénéficieront d\'un bonus de 5% sur leur premier investissement.');
     }
   };
 
@@ -105,11 +105,13 @@ const ReferralDashboard = () => {
       try {
         await navigator.share({
           title: 'DubaiWealth Horizon - Programme de Parrainage',
-          text: 'Rejoignez-moi sur DubaiWealth Horizon et commencez à investir dans l\'immobilier à Dubai !',
+          text: 'Rejoignez-moi sur DubaiWealth Horizon et commencez à investir dans l\'immobilier à Dubai ! En vous inscrivant avec ce lien, vous bénéficierez d\'un bonus de 5% sur votre premier investissement.',
           url: link
         });
+        toast.success('Partage réussi ! N\'oubliez pas d\'informer vos filleuls du bonus de 5% sur leur premier investissement.');
       } catch (error) {
         console.error('Erreur lors du partage:', error);
+        toast.error('Le partage a échoué. Veuillez réessayer.');
       }
     }
   };

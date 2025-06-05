@@ -81,6 +81,11 @@ const Register = () => {
               connectez-vous à votre compte existant
             </Link>
           </p>
+          {formData.referralCode && (
+            <p className="mt-4 text-sm text-green-700 font-medium">
+              En vous inscrivant avec un code de parrainage, vous bénéficierez d'un bonus de 5% sur votre premier investissement.
+            </p>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">

@@ -107,26 +107,34 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Dashboard header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Bonjour, {profile?.full_name || 'Investisseur'}
-          </h1>
-          <p className="text-gray-600">
-            Bienvenue sur votre tableau de bord
-          </p>
+      <div className="mb-8 flex flex-col space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Bonjour, {profile?.full_name || 'Investisseur'}
+            </h1>
+            <p className="text-gray-600">
+              Bienvenue sur votre tableau de bord
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M8 16H3v5"></path>
+            </svg>
+          </button>
         </div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="p-2 rounded-lg hover:bg-gray-100"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-            <path d="M21 3v5h-5"></path>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-            <path d="M8 16H3v5"></path>
-          </svg>
-        </button>
+        {profile && typeof profile === 'object' && 'referred_by' in profile && profile.referred_by && userInvestments.length === 0 && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Bonus de Parrainage ! </strong>
+            <span className="block sm:inline">Votre premier investissement vous donnera un bonus de 5% grâce à votre code de parrainage.</span>
+          </div>
+        )}
       </div>
 
       {/* Mobile-friendly stats cards */}
