@@ -22,7 +22,7 @@ const Withdrawals = () => {
   const withdrawalType = searchParams.get('type');
   const { profile } = useAuthStore();
   const { userInvestments, loadUserInvestments } = useInvestmentStore();
-  const { transactions, loadTransactions, createWithdrawal } = useTransactionStore();
+  const { transactions, loadTransactions, createWithdrawal, availableBalance, totalWithdrawn } = useTransactionStore();
   const { totalCommission, loadReferrals } = useReferralStore();
   const [amount, setAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>('');
@@ -34,51 +34,6 @@ const Withdrawals = () => {
     email: profile?.email || ''
   });
 
-  // Calculer le solde disponible et le total des retraits
-  const calculateAmounts = () => {
-    if (withdrawalType === 'commission') {
-      const withdrawnCommissions = transactions
-        .filter(t => t.type === 'commission_withdrawal' && (t.status === 'completed' || t.status === 'pending'))
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      return {
-        availableBalance: (totalCommission || 0) - withdrawnCommissions,
-        totalWithdrawn: withdrawnCommissions
-      };
-    }
-
-    let totalEarnings = 0;
-    userInvestments.forEach(investment => {
-      if (investment.status === 'active') {
-        const startDate = new Date(investment.created_at);
-        const currentDate = new Date();
-        const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        const dailyEarning = (investment.amount * investment.plan.daily_roi) / 100;
-        const currentEarnings = dailyEarning * diffDays;
-        
-        totalEarnings += currentEarnings;
-      }
-    });
-
-    const completedWithdrawals = transactions
-      .filter(t => t.type === 'withdrawal' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const pendingWithdrawals = transactions
-      .filter(t => t.type === 'withdrawal' && t.status === 'pending')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalWithdrawals = completedWithdrawals + pendingWithdrawals;
-    const availableBalance = Math.floor(totalEarnings - totalWithdrawals);
-
-    return {
-      availableBalance,
-      totalWithdrawn: totalWithdrawals
-    };
-  };
-
   useEffect(() => {
     loadUserInvestments();
     loadTransactions();
@@ -86,6 +41,14 @@ const Withdrawals = () => {
       loadReferrals();
     }
   }, [withdrawalType]);
+
+  const calculateAmounts = () => {
+    // Deprecated: calculation moved to store
+    return {
+      availableBalance,
+      totalWithdrawn
+    };
+  };
 
   const handlePaymentMethodSelect = (method: string, category: string) => {
     setPaymentMethod(method);
@@ -164,8 +127,6 @@ const Withdrawals = () => {
       setLoading(false);
     }
   };
-
-  const { availableBalance, totalWithdrawn } = calculateAmounts();
 
   return (
     <div className="p-6">

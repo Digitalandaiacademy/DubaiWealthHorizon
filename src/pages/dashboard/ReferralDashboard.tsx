@@ -167,89 +167,143 @@ const ReferralDashboard = () => {
       );
     }
 
+    // Version table visible sur md et plus
+    // Version carte visible sur mobile
     return (
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Filleul
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Niveau
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Investissements
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Commissions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+      <>
+        <div className="hidden md:block">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Filleul
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Niveau
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Investissements
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Commissions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredReferrals.map((referral: Referral, index: number) => {
+                const commissionRate = referral.level === 1 ? '10%' : referral.level === 2 ? '5%' : '2%';
+                return (
+                  <tr key={referral.id || index}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {referral.referred?.full_name || 'Nom non disponible'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {referral.referred?.email || 'Email non disponible'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Niveau {referral.level || 1}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <div className={`w-2 h-2 rounded-full mr-2 ${
+                            referral.is_active ? 'bg-green-500' : 'bg-red-500'
+                          }`} />
+                          <span className={`font-medium ${
+                            referral.is_active ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            {referral.is_active ? 'Actif' : 'Inactif'}
+                          </span>
+                        </div>
+                        {referral.total_investment > 0 && (
+                          <div className="text-sm text-gray-600">
+                            <div className="font-medium">Investissement total:</div>
+                            <div className="ml-2 text-xs">
+                              {referral.total_investment.toLocaleString('fr-FR')} FCFA
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        {(referral.total_commission || 0) > 0 ? (
+                          <Fragment>
+                            <div className="text-green-600 font-semibold">
+                              {(referral.total_commission || 0).toLocaleString('fr-FR')} FCFA
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ({commissionRate})
+                            </div>
+                          </Fragment>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Aucune commission</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="md:hidden space-y-4">
           {filteredReferrals.map((referral: Referral, index: number) => {
             const commissionRate = referral.level === 1 ? '10%' : referral.level === 2 ? '5%' : '2%';
             return (
-              <tr key={referral.id || index}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {referral.referred?.full_name || 'Nom non disponible'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {referral.referred?.email || 'Email non disponible'}
-                      </div>
-                    </div>
+              <div key={referral.id || index} className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm font-semibold text-gray-900 mb-1">
+                  {referral.referred?.full_name || 'Nom non disponible'}
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  {referral.referred?.email || 'Email non disponible'}
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">Niveau:</span>
+                    <span className="px-2 inline-flex leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      {referral.level || 1}
+                    </span>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Niveau {referral.level || 1}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        referral.is_active ? 'bg-green-500' : 'bg-red-500'
-                      }`} />
-                      <span className={`font-medium ${
-                        referral.is_active ? 'text-green-700' : 'text-red-700'
-                      }`}>
-                        {referral.is_active ? 'Actif' : 'Inactif'}
-                      </span>
-                    </div>
-                    {referral.total_investment > 0 && (
-                      <div className="text-sm text-gray-600">
-                        <div className="font-medium">Investissement total:</div>
-                        <div className="ml-2 text-xs">
-                          {referral.total_investment.toLocaleString('fr-FR')} FCFA
-                        </div>
-                      </div>
-                    )}
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">Statut:</span>
+                    <span className={`px-2 inline-flex leading-5 font-semibold rounded-full ${
+                      referral.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {referral.is_active ? 'Actif' : 'Inactif'}
+                    </span>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="space-y-1">
+                  {referral.total_investment > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <span className="font-medium">Investissement:</span>
+                      <span>{referral.total_investment.toLocaleString('fr-FR')} FCFA</span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">Commission:</span>
                     {(referral.total_commission || 0) > 0 ? (
-                      <Fragment>
-                        <div className="text-green-600 font-semibold">
-                          {(referral.total_commission || 0).toLocaleString('fr-FR')} FCFA
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ({commissionRate})
-                        </div>
-                      </Fragment>
+                      <span className="text-green-600 font-semibold">
+                        {(referral.total_commission || 0).toLocaleString('fr-FR')} FCFA ({commissionRate})
+                      </span>
                     ) : (
-                      <span className="text-gray-500 text-sm">Aucune commission</span>
+                      <span className="text-gray-500">Aucune commission</span>
                     )}
                   </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             );
           })}
-        </tbody>
-      </table>
+        </div>
+      </>
     );
   };
 
