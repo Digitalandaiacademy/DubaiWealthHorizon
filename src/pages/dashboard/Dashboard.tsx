@@ -196,97 +196,176 @@ const Dashboard = () => {
       </div>
 
       {/* Active investments section */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Investissements Actifs</h2>
-            <Link
-              to="/dashboard/Investments#available-plans"
-              className="inline-flex items-center px-3 py-1.5 text-sm border border-transparent rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <TrendingUp className="h-4 w-4 mr-1" />
-              Investir
-            </Link>
-          </div>
-        </div>
-        <div className="p-4">
-          {loading ? (
-            <div className="flex justify-center items-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-            </div>
-          ) : activeInvestments.length > 0 ? (
-            <div className="space-y-4">
-              {activeInvestments.map((investment) => {
-                // Check if investment cycle is completed
-                const startDate = new Date(investment.created_at);
-                const currentDate = new Date();
-                const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                const isCycleCompleted = diffDays >= investment.cycle_days;
-                
-                // Calculate daily return
-                const dailyReturn = (investment.amount * investment.plan.daily_roi) / 100;
-                
-                return (
-                  <div key={investment.id} className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3
-                          className="font-medium"
-                          style={{ color: investment.plan.color || '#111827' }}
-                        >
-                          {investment.plan.icon ? (
-                            <span
-                              className="inline-block mr-2"
-                              aria-label={investment.plan.name}
-                              title={investment.plan.name}
-                              style={{ color: investment.plan.color || 'inherit' }}
-                            >
-                              {investment.plan.icon}
-                            </span>
-                          ) : null}
-                          {investment.plan.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {formatDate(investment.created_at)}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        investment.status === 'active' 
-                          ? (isCycleCompleted ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800') 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {investment.status === 'active' 
-                          ? (isCycleCompleted ? 'Cycle terminé' : 'Actif') 
-                          : 'Inactif'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-gray-600">Montant investi</p>
-                        <p className="text-lg font-bold">{formatAmount(investment.amount)} FCFA</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Gain quotidien</p>
-                        <p className="text-lg font-bold text-green-600">{formatAmount(dailyReturn)} FCFA</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <p className="text-gray-500 mb-4">Aucun investissement actif pour le moment.</p>
+      <div className="mb-6 space-y-6">
+        {/* Active investments */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">Investissements Actifs</h2>
               <Link
-                to="/dashboard/invest#available-plans"
-                className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                to="/dashboard/Investments#available-plans"
+                className="inline-flex items-center px-3 py-1.5 text-sm border border-transparent rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
-                Commencer à investir
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Investir
               </Link>
             </div>
-          )}
+          </div>
+          <div className="p-4">
+            {loading ? (
+              <div className="flex justify-center items-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+              </div>
+            ) : activeInvestments.filter(inv => {
+              const startDate = new Date(inv.created_at);
+              const currentDate = new Date();
+              const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              return diffDays < inv.cycle_days;
+            }).length > 0 ? (
+              <div className="space-y-4">
+                {activeInvestments.filter(inv => {
+                  const startDate = new Date(inv.created_at);
+                  const currentDate = new Date();
+                  const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
+                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                  return diffDays < inv.cycle_days;
+                }).map((investment) => {
+                  // Calculate daily return
+                  const dailyReturn = (investment.amount * investment.plan.daily_roi) / 100;
+                  
+                  return (
+                    <div key={investment.id} className="bg-gray-50 rounded-lg p-4 shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3
+                            className="font-medium"
+                            style={{ color: investment.plan.color || '#111827' }}
+                          >
+                            {investment.plan.icon ? (
+                              <span
+                                className="inline-block mr-2"
+                                aria-label={investment.plan.name}
+                                title={investment.plan.name}
+                                style={{ color: investment.plan.color || 'inherit' }}
+                              >
+                                {investment.plan.icon}
+                              </span>
+                            ) : null}
+                            {investment.plan.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(investment.created_at)}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Actif
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">Montant investi</p>
+                          <p className="text-lg font-bold">{formatAmount(investment.amount)} FCFA</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">Gain quotidien</p>
+                          <p className="text-lg font-bold text-green-600">{formatAmount(dailyReturn)} FCFA</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500 mb-4">Aucun investissement actif pour le moment.</p>
+                <Link
+                  to="/dashboard/invest#available-plans"
+                  className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Commencer à investir
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Completed cycle investments */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Cycles Terminés</h2>
+          </div>
+          <div className="p-4">
+            {loading ? (
+              <div className="flex justify-center items-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+              </div>
+            ) : activeInvestments.filter(inv => {
+              const startDate = new Date(inv.created_at);
+              const currentDate = new Date();
+              const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              return diffDays >= inv.cycle_days;
+            }).length > 0 ? (
+              <div className="space-y-4">
+                {activeInvestments.filter(inv => {
+                  const startDate = new Date(inv.created_at);
+                  const currentDate = new Date();
+                  const diffTime = Math.abs(currentDate.getTime() - startDate.getTime());
+                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                  return diffDays >= inv.cycle_days;
+                }).map((investment) => {
+                  // Calculate daily return
+                  const dailyReturn = (investment.amount * investment.plan.daily_roi) / 100;
+                  
+                  return (
+                    <div key={investment.id} className="bg-gray-50 rounded-lg p-4 shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3
+                            className="font-medium"
+                            style={{ color: investment.plan.color || '#111827' }}
+                          >
+                            {investment.plan.icon ? (
+                              <span
+                                className="inline-block mr-2"
+                                aria-label={investment.plan.name}
+                                title={investment.plan.name}
+                                style={{ color: investment.plan.color || 'inherit' }}
+                              >
+                                {investment.plan.icon}
+                              </span>
+                            ) : null}
+                            {investment.plan.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(investment.created_at)}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                          Cycle terminé
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">Montant investi</p>
+                          <p className="text-lg font-bold">{formatAmount(investment.amount)} FCFA</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">Gain quotidien</p>
+                          <p className="text-lg font-bold text-green-600">{formatAmount(dailyReturn)} FCFA</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-center py-6 text-gray-500">Aucun cycle terminé pour le moment.</p>
+            )}
+          </div>
         </div>
       </div>
 
