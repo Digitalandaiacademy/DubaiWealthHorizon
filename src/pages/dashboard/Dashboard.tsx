@@ -231,7 +231,22 @@ const Dashboard = () => {
                   <div key={investment.id} className="bg-gray-50 rounded-lg p-4 shadow-sm">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="font-medium text-gray-900">{investment.plan.name}</h3>
+                        <h3
+                          className="font-medium"
+                          style={{ color: investment.plan.color || '#111827' }}
+                        >
+                          {investment.plan.icon ? (
+                            <span
+                              className="inline-block mr-2"
+                              aria-label={investment.plan.name}
+                              title={investment.plan.name}
+                              style={{ color: investment.plan.color || 'inherit' }}
+                            >
+                              {investment.plan.icon}
+                            </span>
+                          ) : null}
+                          {investment.plan.name}
+                        </h3>
                         <p className="text-sm text-gray-500">
                           {formatDate(investment.created_at)}
                         </p>
