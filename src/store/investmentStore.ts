@@ -9,6 +9,8 @@ interface InvestmentPlan {
   daily_roi: number;
   min_withdrawal: number;
   features: string[];
+  color?: string;
+  icon?: string;
 }
 
 interface UserInvestment {
@@ -19,6 +21,7 @@ interface UserInvestment {
   created_at: string;
   plan: InvestmentPlan;
   cycle_days: number;
+  user_id: string;
 }
 
 interface InvestmentState {
@@ -29,6 +32,7 @@ interface InvestmentState {
   loadUserInvestments: () => Promise<void>;
   createInvestment: (planId: string, amount: number, transactionId: string, paymentMethod: string) => Promise<void>;
   checkInvestmentStatus: () => Promise<void>;
+  getHighestActivePlan: () => InvestmentPlan | null;
 }
 
 export const useInvestmentStore = create<InvestmentState>((set, get) => ({
@@ -210,5 +214,18 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => ({
     } catch (error: any) {
       console.error('Error checking investment status:', error);
     }
+  },
+
+  getHighestActivePlan: () => {
+    const { userInvestments } = get();
+    const activeInvestments = userInvestments.filter(inv => inv.status === 'active');
+    if (activeInvestments.length === 0) return null;
+    let highestPlan = activeInvestments[0].plan;
+    for (const inv of activeInvestments) {
+      if (inv.plan.price > highestPlan.price) {
+        highestPlan = inv.plan;
+      }
+    }
+    return highestPlan;
   }
 }));

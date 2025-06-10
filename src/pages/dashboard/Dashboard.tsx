@@ -10,7 +10,7 @@ import { useGoogleAds } from '../../hooks/useGoogleAds';
 
 const Dashboard = () => {
   const { profile } = useAuthStore();
-  const { userInvestments, loadUserInvestments, loading: investmentsLoading } = useInvestmentStore();
+  const { userInvestments, loadUserInvestments, loading: investmentsLoading, getHighestActivePlan } = useInvestmentStore();
   const { 
     transactions, 
     totalReceived, 
@@ -24,6 +24,8 @@ const Dashboard = () => {
   const { trackConversion } = useGoogleAds();
 
   const [showSupport, setShowSupport] = useState(false); // État pour gérer la visibilité du support
+
+  const highestPlan = getHighestActivePlan();
 
   useEffect(() => {
     const loadData = async () => {
@@ -110,7 +112,20 @@ const Dashboard = () => {
       <div className="mb-8 flex flex-col space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1
+              className="text-2xl font-bold"
+              style={{ color: highestPlan?.color || '#111827' }}
+            >
+              {highestPlan && highestPlan.icon ? (
+                <span
+                  className="inline-block mr-2"
+                  aria-label={highestPlan.name}
+                  title={highestPlan.name}
+                  style={{ color: highestPlan.color || 'inherit' }}
+                >
+                  {highestPlan.icon}
+                </span>
+              ) : null}
               Bonjour, {profile?.full_name || 'Investisseur'}
             </h1>
             <p className="text-gray-600">

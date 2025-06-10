@@ -225,6 +225,8 @@ const Investment = () => {
     }
   ];
 
+  
+
   const calculateReturns = () => {
     const percentage = parseFloat(selectedPlan.match(/\d+\.?\d*/)?.[0] || '0');
     

@@ -23,12 +23,17 @@ import { useAuthStore } from '../store/authStore';
 import NotificationDropdown from './NotificationDropdown';
 import CacheManager from './CacheManager';
 
+import { useInvestmentStore } from '../store/investmentStore';
+
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [showCacheManager, setShowCacheManager] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuthStore();
+  const { getHighestActivePlan } = useInvestmentStore();
+
+  const highestPlan = getHighestActivePlan();
 
   const navigation = [
     { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
@@ -141,17 +146,31 @@ const DashboardLayout = () => {
           <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
             <div className="flex-shrink-0 w-full group block">
               <div className="flex items-center">
-                <div>
-                  <UserCircle className="inline-block h-9 w-9 rounded-full" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                    {profile?.full_name}
-                  </p>
-                  <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
-                    {profile?.email}
-                  </p>
-                </div>
+          <div>
+            {highestPlan && highestPlan.icon ? (
+              <span
+                className="inline-block text-2xl mr-2"
+                style={{ color: highestPlan.color || 'inherit' }}
+                aria-label={highestPlan.name}
+                title={highestPlan.name}
+              >
+                {highestPlan.icon}
+              </span>
+            ) : (
+              <UserCircle className="inline-block h-9 w-9 rounded-full" />
+            )}
+          </div>
+          <div className="ml-3">
+            <p
+              className="text-sm font-medium group-hover:text-gray-900"
+              style={{ color: highestPlan?.color || '#4B5563' }} // fallback gray-700
+            >
+              {profile?.full_name}
+            </p>
+            <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
+              {profile?.email}
+            </p>
+          </div>
               </div>
             </div>
           </div>
@@ -193,10 +212,24 @@ const DashboardLayout = () => {
             <div className="flex-shrink-0 w-full group block">
               <div className="flex items-center">
                 <div>
-                  <UserCircle className="inline-block h-9 w-9 rounded-full" />
+                  {highestPlan && highestPlan.icon ? (
+                    <span
+                      className="inline-block text-2xl mr-2"
+                      style={{ color: highestPlan.color || 'inherit' }}
+                      aria-label={highestPlan.name}
+                      title={highestPlan.name}
+                    >
+                      {highestPlan.icon}
+                    </span>
+                  ) : (
+                    <UserCircle className="inline-block h-9 w-9 rounded-full" />
+                  )}
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                  <p
+                    className="text-sm font-medium group-hover:text-gray-900"
+                    style={{ color: highestPlan?.color || '#4B5563' }} // fallback gray-700
+                  >
                     {profile?.full_name}
                   </p>
                   <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">

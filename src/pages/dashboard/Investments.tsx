@@ -235,21 +235,59 @@ const Investments = () => {
           {plans.map((plan) => (
             <div key={plan.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">{plan.name}</h3>
-                <div className="text-xl font-bold text-blue-600 mb-2">
-                  {plan.price.toLocaleString('fr-FR')} FCFA
-                </div>
-                <div className="bg-blue-50 rounded-lg p-2 mb-3 text-center">
-                  <p className="text-sm font-semibold text-blue-700">
-                    {plan.daily_roi}% / jour
-                  </p>
-                </div>
-                <Link
-                  to={`/dashboard/select-payment-country?plan=${plan.id}`}
-                  className="block w-full text-center bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Choisir ce plan
-                </Link>
+          <div
+            className="rounded-t-lg p-4 flex items-center space-x-3"
+            style={{ backgroundColor: plan.color || '#1E40AF' }}
+          >
+            <span className="text-2xl">{plan.icon || '🏦'}</span>
+            <h3 className="text-lg font-bold text-white mb-0">{plan.name}</h3>
+          </div>
+          <div className="p-4">
+            <div className="text-xl font-bold text-blue-600 mb-2">
+              {plan.price.toLocaleString('fr-FR')} FCFA
+            </div>
+            <div className="bg-blue-50 rounded-lg p-2 mb-3 text-center">
+              <p className="text-sm font-semibold text-blue-700">
+                {plan.daily_roi}% / jour
+              </p>
+            </div>
+            {/* Affichage des features du plan */}
+            <ul className="mb-4 px-3">
+              {plan.features && plan.features.length > 0 ? (
+                plan.features.map((feature, index) => (
+                  <li
+                    key={index}
+                    className="text-xs text-gray-700 mb-1 flex items-center"
+                  >
+                    <svg
+                      className="w-4 h-4 text-green-500 mr-2 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      ></path>
+                    </svg>
+                    {feature}
+                  </li>
+                ))
+              ) : (
+                <li className="text-xs text-gray-500 italic">Aucune information disponible</li>
+              )}
+            </ul>
+            <Link
+              to={`/dashboard/select-payment-country?plan=${plan.id}`}
+              className="block w-full text-center bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              Choisir ce plan
+            </Link>
+          </div>
               </div>
             </div>
           ))}
