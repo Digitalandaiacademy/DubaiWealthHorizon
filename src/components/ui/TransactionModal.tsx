@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle, Hourglass, XCircle, Calendar, DollarSign, Tag, Info } from 'lucide-react';
+import { X, CheckCircle, Hourglass, XCircle, Calendar, DollarSign, Tag, Info, Phone } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -9,6 +9,14 @@ interface Transaction {
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
   description?: string;
+  payment_details?: {
+    fullName?: string;
+    phoneNumber?: string;
+    email?: string;
+    cryptoAddress?: string;
+    paymentMethod?: string;
+    paymentCategory?: string;
+  };
 }
 
 interface TransactionModalProps {
@@ -54,7 +62,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, transaction
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
       <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
       
-      <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+      <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
           <X className="w-6 h-6" />
         </button>
@@ -68,7 +76,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, transaction
         </div>
         
         <div className="space-y-4">
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <Tag className="h-5 w-5 text-gray-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Type</p>
@@ -76,7 +84,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, transaction
             </div>
           </div>
           
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <DollarSign className="h-5 w-5 text-gray-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Montant</p>
@@ -86,7 +94,51 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, transaction
             </div>
           </div>
           
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+          {(transaction.type === 'withdrawal' || transaction.type === 'commission_withdrawal') && (
+            <>
+              {transaction.payment_details?.fullName && (
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <Tag className="h-5 w-5 text-gray-500 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Nom complet</p>
+                    <p className="font-medium">{transaction.payment_details.fullName}</p>
+                  </div>
+                </div>
+              )}
+              
+              {transaction.payment_details?.phoneNumber && (
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <Phone className="h-5 w-5 text-gray-500 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Numéro de téléphone</p>
+                    <p className="font-medium">{transaction.payment_details.phoneNumber}</p>
+                  </div>
+                </div>
+              )}
+              
+              {transaction.payment_details?.email && (
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <Tag className="h-5 w-5 text-gray-500 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium text-sm break-all">{transaction.payment_details.email}</p>
+                  </div>
+                </div>
+              )}
+              
+              {transaction.payment_details?.cryptoAddress && (
+                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                  <Tag className="h-5 w-5 text-gray-500 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Adresse crypto</p>
+                    <p className="font-medium text-sm break-all">{transaction.payment_details.cryptoAddress}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <Calendar className="h-5 w-5 text-gray-500 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Date</p>
@@ -95,20 +147,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, transaction
           </div>
           
           {transaction.description && (
-            <div className="flex items-start p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-start p-4 bg-gray-50 rounded-lg">
               <Info className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
               <div>
                 <p className="text-sm text-gray-500">Description</p>
-                <p className="font-medium">{transaction.description}</p>
+                <p className="font-medium break-words">{transaction.description}</p>
               </div>
             </div>
           )}
           
-          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <div className="h-5 w-5 text-gray-500 mr-3">#</div>
-            <div className="overflow-hidden">
+            <div>
               <p className="text-sm text-gray-500">ID</p>
-              <p className="font-medium text-sm truncate">{transaction.id}</p>
+              <p className="font-medium text-sm break-all">{transaction.id}</p>
             </div>
           </div>
         </div>
