@@ -47,6 +47,7 @@ const AdminWithdrawals = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState<'amount' | 'date'>('date');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -200,9 +201,15 @@ const AdminWithdrawals = () => {
       return matchesSearch && matchesStatus && matchesType;
     })
     .sort(([_, a], [__, b]) => {
-      return sortOrder === 'desc' 
-        ? b.totalAmount - a.totalAmount 
-        : a.totalAmount - b.totalAmount;
+      if (sortBy === 'date') {
+        const latestA = Math.max(...a.withdrawals.map(w => new Date(w.created_at).getTime()));
+        const latestB = Math.max(...b.withdrawals.map(w => new Date(w.created_at).getTime()));
+        return sortOrder === 'desc' ? latestB - latestA : latestA - latestB;
+      } else {
+        return sortOrder === 'desc' 
+          ? b.totalAmount - a.totalAmount 
+          : a.totalAmount - b.totalAmount;
+      }
     });
 
   const totalPendingAmount = Object.values(groupedWithdrawals)
@@ -282,12 +289,20 @@ const AdminWithdrawals = () => {
           <option value="standard">Standard</option>
           <option value="commission">Commission</option>
         </select>
-        <button
-          onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+        <select
+          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={`${sortBy}-${sortOrder}`}
+          onChange={(e) => {
+            const [newSortBy, newSortOrder] = e.target.value.split('-');
+            setSortBy(newSortBy as 'amount' | 'date');
+            setSortOrder(newSortOrder as 'asc' | 'desc');
+          }}
         >
-          {sortOrder === 'desc' ? '↓' : '↑'} Montant
-        </button>
+          <option value="date-desc">Date (plus récente)</option>
+          <option value="date-asc">Date (plus ancienne)</option>
+          <option value="amount-desc">Montant (plus élevé)</option>
+          <option value="amount-asc">Montant (plus bas)</option>
+        </select>
       </div>
 
       {loading && (
