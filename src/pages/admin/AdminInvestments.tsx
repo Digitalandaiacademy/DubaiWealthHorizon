@@ -90,8 +90,16 @@ const AdminInvestments = () => {
     const startDate = new Date(investment.created_at);
     const now = new Date();
     const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Récupérer les informations du plan pour obtenir cycle_days
+    // Par défaut, utiliser 60 jours si cycle_days n'est pas disponible
+    const cycleDays = 60; // Valeur par défaut
+    
+    // Limiter les jours écoulés au nombre de jours du cycle
+    const cappedDays = Math.min(daysDiff, cycleDays);
+    
     const dailyReturn = (parseInt(investment.amount) * investment.investment_plans.daily_roi) / 100;
-    return Math.floor(dailyReturn * daysDiff);
+    return Math.floor(dailyReturn * cappedDays);
   };
 
   useEffect(() => {
