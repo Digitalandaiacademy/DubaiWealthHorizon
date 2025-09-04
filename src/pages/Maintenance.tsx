@@ -82,8 +82,9 @@ export default function Maintenance() {
           <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-10 leading-relaxed max-w-3xl mx-auto">
             Le site est en maintenance depuis le{" "}
             <strong className="text-cyan-400">04/09/2025 à 00:01:01</strong>.<br />
+            <strong className="text-green-400">Aucune donnée ne sera perdue</strong> : vos gains resteront intacts, ainsi que vos investissements.<br />
             Nous préparons une nouvelle version exceptionnelle avec des
-            fonctionnalités innovantes.<br />
+            fonctionnalités innovantes, incluant la diminution du temps d'attente des retraits et le passage à la V2.0.<br />
             La maintenance prendra fin à la date affichée ci-dessous :
           </p>
 
