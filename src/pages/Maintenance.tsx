@@ -113,6 +113,9 @@ export default function Maintenance() {
               Nous travaillons aussi à réduire le temps de retrait pour une
               meilleure expérience.
             </p>
+            <p className="text-xs sm:text-sm text-red-400 italic mt-4">
+              NB : Pendant la maintenance, merci de ne pas surcharger vos différents assistants avec des messages et des appels, afin de favoriser la bonne maintenance du site.
+            </p>
             <div className="flex justify-center space-x-6 text-3xl">
               <span className="animate-bounce text-cyan-400">⚡</span>
               <span className="animate-pulse text-purple-400">🔮</span>
